@@ -219,3 +219,4 @@ pnpm-debug.log*
 # React build output
 build/
 dist/
+MultivendorEcom-refactored.zip
