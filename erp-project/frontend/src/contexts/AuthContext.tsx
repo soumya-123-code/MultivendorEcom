@@ -62,7 +62,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ...prev,
         isLoading: false,
         isAuthenticated: true,
-        user: response.data.user,
+        user: response.data?.user,
         otpSent: false,
         otpEmail: null,
       }));
