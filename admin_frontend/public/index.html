@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1a1a2e" />
+    <meta name="description" content="ERP E-Commerce Admin Dashboard - Modern inventory and order management system" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>ERP Commerce | Admin</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { 
+        font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: #0f0f23;
+        color: #e4e4e7;
+      }
+      #root { min-height: 100vh; }
+      .initial-loader {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+      }
+      .loader-content {
+        text-align: center;
+      }
+      .loader-ring {
+        width: 60px;
+        height: 60px;
+        border: 3px solid rgba(99, 102, 241, 0.2);
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        animation: spin 1s ease-in-out infinite;
+        margin: 0 auto 20px;
+      }
+      .loader-text {
+        font-size: 14px;
+        color: #a1a1aa;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root">
+      <div class="initial-loader">
+        <div class="loader-content">
+          <div class="loader-ring"></div>
+          <div class="loader-text">Loading</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
