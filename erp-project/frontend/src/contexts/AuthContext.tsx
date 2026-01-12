@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const requestOTP = async (email: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     try {
-      const response = await authApi.requestOTP(email);
+      const response = await authApi.requestOTP({ email });
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const verifyOTP = async (email: string, otp: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     try {
-      const response = await authApi.verifyOTP(email, otp);
+      const response = await authApi.verifyOTP({ email, otp });
       setState(prev => ({
         ...prev,
         isLoading: false,
