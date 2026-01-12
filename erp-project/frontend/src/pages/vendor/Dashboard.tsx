@@ -3,14 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Grid, Card, CardContent, CardHeader, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Skeleton, Alert, LinearProgress, Chip } from '@mui/material';
 import { ShoppingCart as OrdersIcon, Inventory as InventoryIcon, AttachMoney as RevenueIcon, TrendingUp as TrendingIcon, Refresh as RefreshIcon, Warning as WarningIcon, Visibility as ViewIcon } from '@mui/icons-material';
 import { PageHeader, StatsCard, StatusChip } from '../../components';
-import { useAppSelector } from '../../store';
-import { selectUser } from '../../store/slices/authSlice';
+import { useAuth } from '../../contexts';
 import { vendorsApi, salesOrdersApi, inventoryApi, productsApi } from '../../api';
 import { SalesOrder, Inventory, Product, VendorStats } from '../../types';
 
 const VendorDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const user = useAppSelector(selectUser);
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

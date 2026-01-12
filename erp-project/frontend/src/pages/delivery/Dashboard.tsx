@@ -3,14 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Grid, Card, CardContent, CardHeader, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Skeleton, Alert, Chip, Switch, FormControlLabel, IconButton, Tooltip } from '@mui/material';
 import { LocalShipping as DeliveryIcon, CheckCircle as CompletedIcon, Schedule as PendingIcon, Cancel as FailedIcon, Refresh as RefreshIcon, MyLocation as LocationIcon, Phone as PhoneIcon, Map as MapIcon, PlayArrow as StartIcon } from '@mui/icons-material';
 import { PageHeader, StatsCard, StatusChip } from '../../components';
-import { useAppSelector } from '../../store';
-import { selectUser } from '../../store/slices/authSlice';
+import { useAuth } from '../../contexts';
 import { deliveryAgentsApi, deliveriesApi } from '../../api';
 import { DeliveryAssignment, DeliveryAgentStats } from '../../types';
 
 const DeliveryDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const user = useAppSelector(selectUser);
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

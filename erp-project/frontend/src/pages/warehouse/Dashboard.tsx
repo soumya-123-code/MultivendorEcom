@@ -3,14 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Grid, Card, CardContent, CardHeader, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Skeleton, Alert, Chip, LinearProgress } from '@mui/material';
 import { Inventory as InventoryIcon, ArrowDownward as InboundIcon, ArrowUpward as OutboundIcon, Warning as WarningIcon, Refresh as RefreshIcon, LocalShipping as ShippingIcon } from '@mui/icons-material';
 import { PageHeader, StatsCard, StatusChip } from '../../components';
-import { useAppSelector } from '../../store';
-import { selectUser } from '../../store/slices/authSlice';
+import { useAuth } from '../../contexts';
 import { inventoryApi, purchaseOrdersApi, salesOrdersApi, warehousesApi } from '../../api';
 import { Inventory, PurchaseOrder, SalesOrder, WarehouseStats } from '../../types';
 
 const WarehouseDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const user = useAppSelector(selectUser);
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
