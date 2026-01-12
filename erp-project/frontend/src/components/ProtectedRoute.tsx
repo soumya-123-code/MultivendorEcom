@@ -1,7 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAppSelector } from '../store';
-import { selectIsAuthenticated, selectUserRole } from '../store/slices/authSlice';
+import { useAuth } from '../contexts';
 import { UserRole } from '../types';
 import LoadingScreen from '../components/common/LoadingScreen';
 
@@ -12,8 +11,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
   const location = useLocation();
-  const isAuthenticated = useAppSelector(selectIsAuthenticated);
-  const userRole = useAppSelector(selectUserRole);
+  const { isAuthenticated, userRole } = useAuth();
 
   // Not authenticated - redirect to login
   if (!isAuthenticated) {
@@ -48,8 +46,7 @@ const getDefaultPath = (role: UserRole): string => {
 };
 
 export const RoleRedirect: React.FC = () => {
-  const isAuthenticated = useAppSelector(selectIsAuthenticated);
-  const userRole = useAppSelector(selectUserRole);
+  const { isAuthenticated, userRole } = useAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/auth/login" replace />;

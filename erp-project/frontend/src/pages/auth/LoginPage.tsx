@@ -2,17 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, TextField, Button, Alert, CircularProgress, InputAdornment } from '@mui/material';
 import { Email as EmailIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
-import { useAppDispatch, useAppSelector } from '../../store';
-import { requestOTP, verifyOTP, clearError, clearOTPState, selectAuthLoading, selectAuthError, selectOTPState, selectIsAuthenticated, selectUserRole } from '../../store/slices/authSlice';
+import { useAuth } from '../../contexts';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const isLoading = useAppSelector(selectAuthLoading);
-  const error = useAppSelector(selectAuthError);
-  const { sent: otpSent, email: otpEmail } = useAppSelector(selectOTPState);
-  const isAuthenticated = useAppSelector(selectIsAuthenticated);
-  const userRole = useAppSelector(selectUserRole);
+  const { requestOTP, verifyOTP, clearError, clearOTPState, isLoading, error, otpSent, otpEmail, isAuthenticated, userRole } = useAuth();
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [countdown, setCountdown] = useState(0);
@@ -36,24 +30,32 @@ const LoginPage: React.FC = () => {
 
   const handleRequestOTP = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(clearError());
-    const result = await dispatch(requestOTP(email));
-    if (requestOTP.fulfilled.match(result)) setCountdown(60);
+    clearError();
+    try {
+      await requestOTP(email);
+      setCountdown(60);
+    } catch {}
   };
 
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(clearError());
-    if (otpEmail) await dispatch(verifyOTP({ email: otpEmail, otp }));
+    clearError();
+    if (otpEmail) {
+      try {
+        await verifyOTP(otpEmail, otp);
+      } catch {}
+    }
   };
 
-  const handleBackToEmail = () => { dispatch(clearOTPState()); dispatch(clearError()); setOtp(''); };
+  const handleBackToEmail = () => { clearOTPState(); clearError(); setOtp(''); };
 
   const handleResendOTP = async () => {
     if (countdown === 0 && otpEmail) {
-      dispatch(clearError());
-      const result = await dispatch(requestOTP(otpEmail));
-      if (requestOTP.fulfilled.match(result)) setCountdown(60);
+      clearError();
+      try {
+        await requestOTP(otpEmail);
+        setCountdown(60);
+      } catch {}
     }
   };
 
@@ -66,7 +68,7 @@ const LoginPage: React.FC = () => {
         </Typography>
       </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 3 }} onClose={() => dispatch(clearError())}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 3 }} onClose={clearError}>{error}</Alert>}
 
       {!otpSent ? (
         <Box component="form" onSubmit={handleRequestOTP}>

@@ -1,32 +1,29 @@
 import React, { useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
-import { Provider } from 'react-redux';
 import { ThemeProvider  } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Snackbar, Alert } from '@mui/material';
-import { store, useAppSelector, useAppDispatch } from './store';
-import { selectDarkMode, selectNotifications, removeNotification } from './store/slices/uiSlice';
+import { AuthProvider, UIProvider, useUI } from './contexts';
 import { lightTheme, darkTheme } from './theme';
 import { router } from './routes';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
 // Toast notifications component
 const ToastNotifications: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const notifications = useAppSelector(selectNotifications);
+  const { notifications, removeNotification } = useUI();
 
   useEffect(() => {
     notifications.forEach((notification) => {
       const timer = setTimeout(() => {
-        dispatch(removeNotification(notification.id));
+        removeNotification(notification.id);
       }, notification.duration || 5000);
 
       return () => clearTimeout(timer);
     });
-  }, [notifications, dispatch]);
+  }, [notifications, removeNotification]);
 
   const handleClose = (id: string) => {
-    dispatch(removeNotification(id));
+    removeNotification(id);
   };
 
   return (
@@ -56,7 +53,7 @@ const ToastNotifications: React.FC = () => {
 
 // Theme wrapper component
 const ThemeWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const darkMode = useAppSelector(selectDarkMode);
+  const { darkMode } = useUI();
   const theme = darkMode ? darkTheme : lightTheme;
 
   return (
@@ -72,11 +69,13 @@ const ThemeWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <Provider store={store}>
-        <ThemeWrapper>
-          <RouterProvider router={router} />
-        </ThemeWrapper>
-      </Provider>
+      <AuthProvider>
+        <UIProvider>
+          <ThemeWrapper>
+            <RouterProvider router={router} />
+          </ThemeWrapper>
+        </UIProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 };

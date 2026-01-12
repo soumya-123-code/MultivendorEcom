@@ -24,8 +24,7 @@ import {
 } from '@mui/icons-material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { PageHeader, StatsCard, StatusChip } from '../../components';
-import { useAppSelector } from '../../store';
-import { selectUser } from '../../store/slices/authSlice';
+import { useAuth } from '../../contexts';
 
 const mockStats = {
   totalUsers: 1250,
@@ -73,7 +72,7 @@ const mockPendingVendors = [
 const AdminDashboard: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const user = useAppSelector(selectUser);
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

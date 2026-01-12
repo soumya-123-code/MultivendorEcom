@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useAppDispatch } from '../store';
-import { addNotification } from '../store/slices/uiSlice';
+import { useUI } from '../contexts';
 
 // API Query hook - fetches data on mount and dependencies change
 export function useApiQuery<T>(
@@ -122,13 +121,13 @@ export function useAsync<T>() {
 
 // Toast notification hook
 export function useToast() {
-  const dispatch = useAppDispatch();
+  const { addNotification } = useUI();
 
   const showToast = useCallback(
     (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
-      dispatch(addNotification({ message, type }));
+      addNotification({ message, type });
     },
-    [dispatch]
+    [addNotification]
   );
 
   return {

@@ -3,23 +3,20 @@ import { Outlet } from 'react-router-dom';
 import { Box, useTheme, useMediaQuery } from '@mui/material';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { useAppSelector, useAppDispatch } from '../store';
-import { selectSidebarOpen, selectSidebarCollapsed, setSidebarOpen, toggleSidebarCollapsed } from '../store/slices/uiSlice';
+import { useUI } from '../contexts';
 
 const DRAWER_WIDTH = 260;
 const COLLAPSED_WIDTH = 72;
 
 const MainLayout: React.FC = () => {
   const theme = useTheme();
-  const dispatch = useAppDispatch();
+  const { sidebarOpen, sidebarCollapsed, setSidebarOpen, toggleSidebarCollapsed } = useUI();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const sidebarOpen = useAppSelector(selectSidebarOpen);
-  const sidebarCollapsed = useAppSelector(selectSidebarCollapsed);
 
-  const handleSidebarClose = () => dispatch(setSidebarOpen(false));
+  const handleSidebarClose = () => setSidebarOpen(false);
   const handleMenuToggle = () => {
-    if (isMobile) dispatch(setSidebarOpen(!sidebarOpen));
-    else dispatch(toggleSidebarCollapsed());
+    if (isMobile) setSidebarOpen(!sidebarOpen);
+    else toggleSidebarCollapsed();
   };
 
   const drawerWidth = isMobile ? DRAWER_WIDTH : (sidebarCollapsed ? COLLAPSED_WIDTH : DRAWER_WIDTH);

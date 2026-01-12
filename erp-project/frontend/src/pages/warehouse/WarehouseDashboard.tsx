@@ -27,8 +27,7 @@ import {
 } from '@mui/icons-material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { PageHeader, StatsCard, StatusChip } from '../../components';
-import { useAppSelector } from '../../store';
-import { selectUser } from '../../store/slices/authSlice';
+import { useAuth } from '../../contexts';
 
 const mockStats = {
   totalItems: 15420,
@@ -71,7 +70,7 @@ const mockLowStock = [
 const WarehouseDashboard: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const user = useAppSelector(selectUser);
+  const { user } = useAuth();
 
   return (
     <Box>

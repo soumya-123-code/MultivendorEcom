@@ -13,8 +13,7 @@ import {
   Input as InboundIcon, Output as OutboundIcon, SwapHoriz as AdjustmentsIcon,
   CheckCircle as CompletedIcon, History as HistoryIcon,
 } from '@mui/icons-material';
-import { useAppSelector } from '../store';
-import { selectUser } from '../store/slices/authSlice';
+import { useAuth } from '../contexts';
 import { UserRole } from '../types';
 
 const DRAWER_WIDTH = 260;
@@ -83,7 +82,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, collapsed, onClose, variant = '
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const user = useAppSelector(selectUser);
+  const { user } = useAuth();
   const navItems = getNavItems(user?.role || null);
   const drawerWidth = collapsed ? COLLAPSED_WIDTH : DRAWER_WIDTH;
 

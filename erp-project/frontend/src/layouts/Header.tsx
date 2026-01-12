@@ -8,30 +8,26 @@ import {
   DarkMode as DarkModeIcon, LightMode as LightModeIcon, Person as PersonIcon,
   Settings as SettingsIcon, Logout as LogoutIcon, Search as SearchIcon,
 } from '@mui/icons-material';
-import { useAppDispatch, useAppSelector } from '../store';
-import { logout, selectUser } from '../store/slices/authSlice';
-import { toggleDarkMode, selectDarkMode, toggleSidebarCollapsed, selectSidebarCollapsed } from '../store/slices/uiSlice';
+import { useAuth, useUI } from '../contexts';
 
 interface HeaderProps { onMenuToggle?: () => void; }
 
 const Header: React.FC<HeaderProps> = ({ onMenuToggle }) => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const user = useAppSelector(selectUser);
-  const darkMode = useAppSelector(selectDarkMode);
-  const sidebarCollapsed = useAppSelector(selectSidebarCollapsed);
+  const { user, logout } = useAuth();
+  const { darkMode, sidebarCollapsed, toggleDarkMode, toggleSidebarCollapsed } = useUI();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notifAnchorEl, setNotifAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleLogout = async () => {
     setAnchorEl(null);
-    await dispatch(logout());
+    await logout();
     navigate('/auth/login');
   };
 
-  const handleToggleDarkMode = () => dispatch(toggleDarkMode());
-  const handleToggleSidebar = () => onMenuToggle ? onMenuToggle() : dispatch(toggleSidebarCollapsed());
+  const handleToggleDarkMode = () => toggleDarkMode();
+  const handleToggleSidebar = () => onMenuToggle ? onMenuToggle() : toggleSidebarCollapsed();
 
   const getProfilePath = () => {
     switch (user?.role) {

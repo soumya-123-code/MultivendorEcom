@@ -29,8 +29,7 @@ import {
   LocationOn as LocationIcon,
 } from '@mui/icons-material';
 import { PageHeader, StatsCard, StatusChip } from '../../components';
-import { useAppSelector } from '../../store';
-import { selectUser } from '../../store/slices/authSlice';
+import { useAuth } from '../../contexts';
 
 const mockStats = {
   assignedToday: 8,
@@ -91,7 +90,7 @@ const mockCompletedToday = [
 const DeliveryDashboard: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const user = useAppSelector(selectUser);
+  const { user } = useAuth();
   const [isAvailable, setIsAvailable] = useState(true);
 
   const handleAvailabilityToggle = () => {
