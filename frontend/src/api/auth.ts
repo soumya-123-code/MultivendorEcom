@@ -1,29 +1,41 @@
 import { api, tokenManager } from './client';
-import type { ApiResponse, LoginResponse, User, OTPRequest, OTPVerify } from '@/types';
+import type { User, OTPRequest, OTPVerify } from '../types';
+
+// Response types for auth endpoints
+interface OTPRequestResponse {
+  otp_valid_for: number;
+}
+
+interface VerifyOTPResponse {
+  access: string;
+  refresh: string;
+  user: User;
+}
 
 export const authApi = {
   // Request OTP for login
-  requestOTP: (data: OTPRequest) =>
-    api.post<ApiResponse<{ otp_valid_for: number }>>('/auth/request-otp/', data),
+  requestOTP: (data: OTPRequest): Promise<OTPRequestResponse> =>
+    api.post<OTPRequestResponse>('/auth/request-otp/', data),
 
   // Verify OTP and get tokens
-  verifyOTP: async (data: OTPVerify) => {
-    const response = await api.post<LoginResponse>('/auth/verify-otp/', data);
-    if (response.success && response.data) {
-      tokenManager.setTokens(response.data.access, response.data.refresh);
-      tokenManager.setUser(response.data.user);
+  verifyOTP: async (data: OTPVerify): Promise<{ user: User }> => {
+    const response = await api.post<VerifyOTPResponse>('/auth/verify-otp/', data);
+    // response is already flattened: { access, refresh, user }
+    if (response.access && response.refresh) {
+      tokenManager.setTokens(response.access, response.refresh);
+      tokenManager.setUser(response.user);
     }
-    return response;
+    return { user: response.user };
   },
 
   // Refresh access token
-  refreshToken: () =>
-    api.post<ApiResponse<{ access: string }>>('/auth/refresh/', {
+  refreshToken: (): Promise<{ access: string }> =>
+    api.post<{ access: string }>('/auth/refresh/', {
       refresh: tokenManager.getRefreshToken(),
     }),
 
   // Logout
-  logout: async () => {
+  logout: async (): Promise<void> => {
     try {
       await api.post('/auth/logout/', {
         refresh: tokenManager.getRefreshToken(),
@@ -34,17 +46,17 @@ export const authApi = {
   },
 
   // Get current user
-  getCurrentUser: () => api.get<ApiResponse<User>>('/users/me/'),
+  getCurrentUser: (): Promise<User> => api.get<User>('/users/me/'),
 
   // Update current user
-  updateCurrentUser: (data: Partial<User>) =>
-    api.patch<ApiResponse<User>>('/users/me/', data),
+  updateCurrentUser: (data: Partial<User>): Promise<User> =>
+    api.patch<User>('/users/me/', data),
 
-  // Check if user is authenticated
-  isAuthenticated: () => tokenManager.isAuthenticated(),
+  // Check if user is authenticated (has token in storage)
+  isAuthenticated: (): boolean => tokenManager.isAuthenticated(),
 
-  // Get stored user
-  getStoredUser: () => tokenManager.getUser(),
+  // Get stored user from localStorage
+  getStoredUser: (): User | null => tokenManager.getUser(),
 };
 
 export default authApi;

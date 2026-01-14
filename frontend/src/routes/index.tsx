@@ -1,8 +1,9 @@
 import React, { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { MainLayout, AuthLayout } from '../layouts';
-import ProtectedRoute from './ProtectedRoute';
+import ProtectedRoute, { getDefaultDashboard } from './ProtectedRoute';
 import LoadingScreen from '../components/common/LoadingScreen';
+import { useAuth } from '../contexts';
 
 // Lazy load pages
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
@@ -56,10 +57,25 @@ const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
   </div>
 );
 
+// Smart redirect component for root path
+const RootRedirect: React.FC = () => {
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (isAuthenticated && user) {
+    return <Navigate to={getDefaultDashboard(user.role)} replace />;
+  }
+
+  return <Navigate to="/auth/login" replace />;
+};
+
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <Navigate to="/auth/login" replace />,
+    element: <RootRedirect />,
   },
   // Auth Routes
   {

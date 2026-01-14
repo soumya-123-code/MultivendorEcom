@@ -2,7 +2,7 @@
 // User & Authentication Types
 // ============================================
 
-export type UserRole = 'super_admin' | 'admin' | 'staff' | 'vendor' | 'customer' | 'delivery_agent';
+export type UserRole = 'super_admin' | 'admin' | 'staff' | 'vendor' | 'customer' | 'delivery_agent' | 'warehouse';
 
 export interface User {
   id: number;
