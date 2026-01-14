@@ -1,104 +1,120 @@
-import React, { useEffect, useRef } from 'react';
-import { RouterProvider } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import { Snackbar, Alert } from '@mui/material';
-import { AuthProvider, UIProvider, useUI } from './contexts';
-import { lightTheme, darkTheme } from './theme';
-import { router } from './routes';
-import ErrorBoundary from './components/common/ErrorBoundary';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
-// Toast notifications component - fixed to prevent timer accumulation
-const ToastNotifications: React.FC = () => {
-  const { notifications, removeNotification } = useUI();
-  const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+// Pages
+import LoginPage from './pages/LoginPage';
+import Dashboard from './pages/Dashboard';
+import ProductsPage from './pages/ProductsPage';
+import CategoriesPage from './pages/CategoriesPage';
+import WarehousesPage from './pages/WarehousesPage';
+import InventoryPage from './pages/InventoryPage';
+import SalesOrdersPage from './pages/SalesOrdersPage';
+import PurchaseOrdersPage from './pages/PurchaseOrdersPage';
+import DeliveryAgentsPage from './pages/DeliveryAgentsPage';
+import DeliveriesPage from './pages/DeliveriesPage';
+import CustomersPage from './pages/CustomersPage';
+import VendorsPage from './pages/VendorsPage';
+import SuppliersPage from './pages/SuppliersPage';
+import PaymentsPage from './pages/PaymentsPage';
+import NotificationsPage from './pages/NotificationsPage';
+import ProfilePage from './pages/ProfilePage';
+import Layout from './components/Layout';
+import { CircularProgress, Box } from '@mui/material';
 
-  useEffect(() => {
-    // Set up timers for new notifications
-    notifications.forEach((notification) => {
-      if (!timersRef.current[notification.id]) {
-        timersRef.current[notification.id] = setTimeout(() => {
-          removeNotification(notification.id);
-          delete timersRef.current[notification.id];
-        }, notification.duration || 5000);
-      }
-    });
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#1976d2',
+    },
+    secondary: {
+      main: '#dc004e',
+    },
+  },
+});
 
-    // Clean up timers for removed notifications
-    const currentIds = new Set(notifications.map(n => n.id));
-    Object.keys(timersRef.current).forEach((id) => {
-      if (!currentIds.has(id)) {
-        clearTimeout(timersRef.current[id]);
-        delete timersRef.current[id];
-      }
-    });
-  }, [notifications, removeNotification]);
+// Protected Route Component
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      Object.values(timersRef.current).forEach(clearTimeout);
-    };
-  }, []);
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-  const handleClose = (id: string) => {
-    if (timersRef.current[id]) {
-      clearTimeout(timersRef.current[id]);
-      delete timersRef.current[id];
-    }
-    removeNotification(id);
-  };
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// App Routes Component (uses auth context)
+function AppRoutes() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <>
-      {notifications.map((notification, index) => (
-        <Snackbar
-          key={notification.id}
-          open
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-          sx={{ top: `${(index * 60) + 24}px !important` }}
-        >
-          <Alert
-            onClose={() => handleClose(notification.id)}
-            severity={notification.type}
-            variant="filled"
-            sx={{ width: '100%' }}
-          >
-            {notification.message}
-          </Alert>
-        </Snackbar>
-      ))}
-    </>
+    <Routes>
+      {/* Login Route */}
+      <Route 
+        path="/login" 
+        element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} 
+      />
+      
+      {/* Protected Routes */}
+      <Route 
+        path="/" 
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Dashboard />} />
+        <Route path="products" element={<ProductsPage />} />
+        <Route path="categories" element={<CategoriesPage />} />
+        <Route path="warehouses" element={<WarehousesPage />} />
+        <Route path="inventory" element={<InventoryPage />} />
+        <Route path="sales-orders" element={<SalesOrdersPage />} />
+        <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+        <Route path="delivery-agents" element={<DeliveryAgentsPage />} />
+        <Route path="deliveries" element={<DeliveriesPage />} />
+        <Route path="customers" element={<CustomersPage />} />
+        <Route path="vendors" element={<VendorsPage />} />
+        <Route path="suppliers" element={<SuppliersPage />} />
+        <Route path="payments" element={<PaymentsPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+      </Route>
+
+      {/* Catch all - redirect to home */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
-};
+}
 
-// Theme wrapper component
-const ThemeWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { darkMode } = useUI();
-  const theme = darkMode ? darkTheme : lightTheme;
-
+function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      {children}
-      <ToastNotifications />
+      <BrowserRouter>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </BrowserRouter>
     </ThemeProvider>
   );
-};
-
-// Main App component
-const App: React.FC = () => {
-  return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <UIProvider>
-          <ThemeWrapper>
-            <RouterProvider router={router} />
-          </ThemeWrapper>
-        </UIProvider>
-      </AuthProvider>
-    </ErrorBoundary>
-  );
-};
+}
 
 export default App;

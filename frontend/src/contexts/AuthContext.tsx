@@ -1,171 +1,99 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { User, UserRole } from '../types';
-import { authApi } from '../api';
-import { AUTH_EVENTS } from '../api/client';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-interface AuthState {
+interface User {
+  id: number;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  role?: string;
+}
+
+interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  error: string | null;
-  otpSent: boolean;
-  otpEmail: string | null;
-}
-
-interface AuthContextValue extends AuthState {
-  requestOTP: (email: string) => Promise<void>;
-  verifyOTP: (email: string, otp: string) => Promise<void>;
+  login: (accessToken: string, refreshToken: string, userData?: User) => void;
   logout: () => void;
-  clearError: () => void;
-  clearOTPState: () => void;
-  userRole: UserRole | null;
+  updateUser: (userData: User) => void;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const initialState: AuthState = {
-  user: null,
-  isAuthenticated: false,
-  isLoading: true,
-  error: null,
-  otpSent: false,
-  otpEmail: null,
-};
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<AuthState>(initialState);
-
-  // Handle session expiry from API client
+  // Initialize auth state from localStorage on mount
   useEffect(() => {
-    const handleSessionExpired = () => {
-      setState({
-        ...initialState,
-        isLoading: false,
-      });
-    };
+    const initAuth = () => {
+      const accessToken = localStorage.getItem('access_token');
+      const refreshToken = localStorage.getItem('refresh_token');
+      const savedUser = localStorage.getItem('user');
 
-    window.addEventListener(AUTH_EVENTS.SESSION_EXPIRED, handleSessionExpired);
-    return () => window.removeEventListener(AUTH_EVENTS.SESSION_EXPIRED, handleSessionExpired);
-  }, []);
-
-  // Validate session on mount
-  useEffect(() => {
-    const validateSession = async () => {
-      if (!authApi.isAuthenticated()) {
-        setState(prev => ({ ...prev, isLoading: false }));
-        return;
-      }
-
-      const storedUser = authApi.getStoredUser();
-
-      if (storedUser) {
-        setState(prev => ({
-          ...prev,
-          user: storedUser,
-          isAuthenticated: true,
-          isLoading: false,
-        }));
-
-        // Background refresh (silent fail)
+      if ((accessToken || refreshToken) && savedUser) {
         try {
-          const freshUser = await authApi.getCurrentUser();
-          setState(prev => ({ ...prev, user: freshUser }));
-        } catch {
-          // Keep using stored user
-        }
-      } else {
-        try {
-          const user = await authApi.getCurrentUser();
-          setState(prev => ({
-            ...prev,
-            user,
-            isAuthenticated: true,
-            isLoading: false,
-          }));
-        } catch {
-          setState(prev => ({
-            ...prev,
-            isLoading: false,
-          }));
+          setUser(JSON.parse(savedUser));
+        } catch (error) {
+          console.error('Error parsing saved user:', error);
+          localStorage.removeItem('user');
         }
       }
+
+      setIsLoading(false);
     };
 
-    validateSession();
+    initAuth();
   }, []);
 
-  const requestOTP = useCallback(async (email: string) => {
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
-    try {
-      await authApi.requestOTP({ email });
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        otpSent: true,
-        otpEmail: email,
-      }));
-    } catch (error: unknown) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to send OTP',
-      }));
-      throw error;
+  const login = (accessToken: string, refreshToken: string, userData?: User) => {
+    // Store tokens
+    localStorage.setItem('access_token', accessToken);
+    localStorage.setItem('refresh_token', refreshToken);
+
+    // Store user data if provided
+    if (userData) {
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
     }
-  }, []);
 
-  const verifyOTP = useCallback(async (email: string, otp: string) => {
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
-    try {
-      const { user } = await authApi.verifyOTP({ email, otp });
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        isAuthenticated: true,
-        user,
-        otpSent: false,
-        otpEmail: null,
-      }));
-    } catch (error: unknown) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Invalid OTP',
-      }));
-      throw error;
-    }
-  }, []);
+    console.log('✅ User logged in successfully');
+  };
 
-  const logout = useCallback(() => {
-    authApi.logout().catch(() => {});
-    setState({ ...initialState, isLoading: false });
-  }, []);
+  const logout = () => {
+    // Clear tokens
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
 
-  const clearError = useCallback(() => {
-    setState(prev => ({ ...prev, error: null }));
-  }, []);
+    // Clear user state
+    setUser(null);
 
-  const clearOTPState = useCallback(() => {
-    setState(prev => ({ ...prev, otpSent: false, otpEmail: null }));
-  }, []);
+    console.log('👋 User logged out');
+  };
 
-  const value: AuthContextValue = {
-    ...state,
-    requestOTP,
-    verifyOTP,
+  const updateUser = (userData: User) => {
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+  };
+
+  const value = {
+    user,
+    isAuthenticated: !!user || !!(localStorage.getItem('access_token') || localStorage.getItem('refresh_token')),
+    isLoading,
+    login,
     logout,
-    clearError,
-    clearOTPState,
-    userRole: state.user?.role || null,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+}
 
-export const useAuth = (): AuthContextValue => {
+// Custom hook to use auth context
+export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
+}
