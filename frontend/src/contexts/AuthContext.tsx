@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { User, UserRole } from '../types';
 import { authApi } from '../api';
 
@@ -26,67 +26,112 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>({
-    user: authApi.getStoredUser(),
-    isAuthenticated: authApi.isAuthenticated(),
-    isLoading: false,
+    user: null,
+    isAuthenticated: false,
+    isLoading: true, // Start with loading to check stored session
     error: null,
     otpSent: false,
     otpEmail: null,
   });
 
-  const requestOTP = async (email: string) => {
+  // Validate session on initial load
+  useEffect(() => {
+    const validateSession = async () => {
+      // Check if we have a stored token
+      if (!authApi.isAuthenticated()) {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+
+      // Try to get stored user first for faster initial render
+      const storedUser = authApi.getStoredUser();
+      if (storedUser) {
+        setState(prev => ({
+          ...prev,
+          user: storedUser,
+          isAuthenticated: true,
+          isLoading: false,
+        }));
+      }
+
+      // Validate token by fetching current user from server
+      try {
+        const user = await authApi.getCurrentUser();
+        setState(prev => ({
+          ...prev,
+          user,
+          isAuthenticated: true,
+          isLoading: false,
+        }));
+      } catch {
+        // Token is invalid - clear and redirect will happen via ProtectedRoute
+        setState(prev => ({
+          ...prev,
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        }));
+      }
+    };
+
+    validateSession();
+  }, []);
+
+  const requestOTP = useCallback(async (email: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     try {
-      const response = await authApi.requestOTP({ email });
+      await authApi.requestOTP({ email });
       setState(prev => ({
         ...prev,
         isLoading: false,
         otpSent: true,
         otpEmail: email,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to send OTP';
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: error.message || 'Failed to send OTP',
+        error: message,
       }));
       throw error;
     }
-  };
+  }, []);
 
-  const verifyOTP = async (email: string, otp: string) => {
+  const verifyOTP = useCallback(async (email: string, otp: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     try {
-      const response = await authApi.verifyOTP({ email, otp });
+      const { user } = await authApi.verifyOTP({ email, otp });
       setState(prev => ({
         ...prev,
         isLoading: false,
         isAuthenticated: true,
-        user: response.data.user,
+        user,
         otpSent: false,
         otpEmail: null,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Invalid OTP';
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: error.message || 'Invalid OTP',
+        error: message,
       }));
       throw error;
     }
-  };
+  }, []);
 
-  const fetchCurrentUser = async () => {
+  const fetchCurrentUser = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
-      const response = await authApi.getCurrentUser();
+      const user = await authApi.getCurrentUser();
       setState(prev => ({
         ...prev,
         isLoading: false,
-        user: response.data,
+        user,
         isAuthenticated: true,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -95,12 +140,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }));
       throw error;
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await authApi.logout();
-    } catch {}
+    } catch {
+      // Ignore logout errors, clear state anyway
+    }
     setState({
       user: null,
       isAuthenticated: false,
@@ -109,19 +156,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       otpSent: false,
       otpEmail: null,
     });
-  };
+  }, []);
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     setState(prev => ({ ...prev, error: null }));
-  };
+  }, []);
 
-  const clearOTPState = () => {
+  const clearOTPState = useCallback(() => {
     setState(prev => ({ ...prev, otpSent: false, otpEmail: null }));
-  };
+  }, []);
 
-  const setUser = (user: User) => {
+  const setUser = useCallback((user: User) => {
     setState(prev => ({ ...prev, user, isAuthenticated: true }));
-  };
+  }, []);
 
   const userRole: UserRole | null = state.user?.role || null;
 
