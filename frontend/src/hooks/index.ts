@@ -1,38 +1,49 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useUI } from '../contexts';
 
-// API Query hook - fetches data on mount and dependencies change
+// Simple API query hook - fetches data on mount
 export function useApiQuery<T>(
-  apiCall: () => Promise<{ data: T }>,
-  dependencies: any[] = []
+  apiCall: () => Promise<T>,
+  dependencies: unknown[] = []
 ) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const mountedRef = useRef(true);
 
   const refetch = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const response = await apiCall();
-      setData(response.data);
-      return response.data;
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      if (mountedRef.current) {
+        setData(response);
+      }
+      return response;
+    } catch (err: unknown) {
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
-  }, [apiCall, ...dependencies]);
+  }, dependencies); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { refetch(); }, [refetch]);
+  useEffect(() => {
+    mountedRef.current = true;
+    refetch();
+    return () => { mountedRef.current = false; };
+  }, [refetch]);
 
   return { data, loading, error, refetch };
 }
 
-// Paginated API hook
+// Paginated API hook - simple and stable
 export function usePaginatedApi<T>(
-  apiCall: (params: { page: number; page_size: number; [key: string]: any }) => Promise<{ data: { results: T[]; count: number } }>,
-  initialParams: { [key: string]: any } = {}
+  apiCall: (params: { page: number; page_size: number; [key: string]: unknown }) => Promise<{ results: T[]; count: number }>,
+  initialParams: Record<string, unknown> = {}
 ) {
   const [data, setData] = useState<T[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -41,60 +52,88 @@ export function usePaginatedApi<T>(
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [params, setParams] = useState(initialParams);
+  const mountedRef = useRef(true);
+  const apiCallRef = useRef(apiCall);
+  apiCallRef.current = apiCall;
 
-  const fetch = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiCall({ page: page + 1, page_size: pageSize, ...params });
-      setData(response.data.results);
-      setTotalCount(response.data.count);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      const response = await apiCallRef.current({ page: page + 1, page_size: pageSize, ...params });
+      if (mountedRef.current) {
+        setData(response.results || []);
+        setTotalCount(response.count || 0);
+      }
+    } catch (err: unknown) {
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
-  }, [apiCall, page, pageSize, JSON.stringify(params)]);
+  }, [page, pageSize, params]);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  useEffect(() => {
+    mountedRef.current = true;
+    fetchData();
+    return () => { mountedRef.current = false; };
+  }, [fetchData]);
 
-  return { 
-    data, totalCount, loading, error, page, pageSize, 
-    setPage, setPageSize, 
-    updateParams: (newParams: { [key: string]: any }) => { setParams(prev => ({ ...prev, ...newParams })); setPage(0); },
-    refetch: fetch 
+  const updateParams = useCallback((newParams: Record<string, unknown>) => {
+    setParams(prev => ({ ...prev, ...newParams }));
+    setPage(0);
+  }, []);
+
+  return {
+    data,
+    totalCount,
+    loading,
+    error,
+    page,
+    pageSize,
+    setPage,
+    setPageSize: (size: number) => { setPageSize(size); setPage(0); },
+    updateParams,
+    refetch: fetchData,
   };
 }
 
-// Mutation hook for POST/PUT/DELETE operations
+// Mutation hook for POST/PUT/DELETE
 export function useMutation<T, P>(
-  apiCall: (params: P) => Promise<{ data: T }>,
+  apiCall: (params: P) => Promise<T>,
   options?: { onSuccess?: (data: T) => void; onError?: (error: string) => void }
 ) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const apiCallRef = useRef(apiCall);
+  const optionsRef = useRef(options);
+  apiCallRef.current = apiCall;
+  optionsRef.current = options;
 
   const mutate = useCallback(async (params: P) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiCall(params);
-      options?.onSuccess?.(response.data);
-      return response.data;
-    } catch (err: any) {
-      const errorMessage = err.message || 'An error occurred';
+      const response = await apiCallRef.current(params);
+      optionsRef.current?.onSuccess?.(response);
+      return response;
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMessage);
-      options?.onError?.(errorMessage);
+      optionsRef.current?.onError?.(errorMessage);
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [apiCall]);
+  }, []);
 
   return { mutate, loading, error };
 }
 
-// Generic async operation hook with loading and error states
+// Generic async operation hook
 export function useAsync<T>() {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
@@ -107,8 +146,8 @@ export function useAsync<T>() {
       const result = await asyncFunction();
       setData(result);
       return result;
-    } catch (err: any) {
-      const errorMessage = err.message || 'An error occurred';
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMessage);
       throw err;
     } finally {
@@ -123,18 +162,11 @@ export function useAsync<T>() {
 export function useToast() {
   const { addNotification } = useUI();
 
-  const showToast = useCallback(
-    (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
-      addNotification({ message, type });
-    },
-    [addNotification]
-  );
-
   return {
-    success: (message: string) => showToast(message, 'success'),
-    error: (message: string) => showToast(message, 'error'),
-    warning: (message: string) => showToast(message, 'warning'),
-    info: (message: string) => showToast(message, 'info'),
+    success: useCallback((message: string) => addNotification({ message, type: 'success' }), [addNotification]),
+    error: useCallback((message: string) => addNotification({ message, type: 'error' }), [addNotification]),
+    warning: useCallback((message: string) => addNotification({ message, type: 'warning' }), [addNotification]),
+    info: useCallback((message: string) => addNotification({ message, type: 'info' }), [addNotification]),
   };
 }
 
@@ -143,41 +175,24 @@ export function usePagination(initialPage = 0, initialRowsPerPage = 10) {
   const [page, setPage] = useState(initialPage);
   const [rowsPerPage, setRowsPerPage] = useState(initialRowsPerPage);
 
-  const handlePageChange = useCallback((newPage: number) => {
-    setPage(newPage);
-  }, []);
-
+  const handlePageChange = useCallback((newPage: number) => setPage(newPage), []);
   const handleRowsPerPageChange = useCallback((newRowsPerPage: number) => {
     setRowsPerPage(newRowsPerPage);
     setPage(0);
   }, []);
+  const resetPagination = useCallback(() => setPage(0), []);
 
-  const resetPagination = useCallback(() => {
-    setPage(0);
-  }, []);
-
-  return {
-    page,
-    rowsPerPage,
-    handlePageChange,
-    handleRowsPerPageChange,
-    resetPagination,
-  };
+  return { page, rowsPerPage, handlePageChange, handleRowsPerPageChange, resetPagination };
 }
 
-// Debounce hook
+// Fixed debounce hook - using useEffect instead of useState
 export function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
-  useState(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  });
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
 
   return debouncedValue;
 }
@@ -188,23 +203,20 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
     try {
       const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
-    } catch (error) {
+    } catch {
       return initialValue;
     }
   });
 
-  const setValue = useCallback(
-    (value: T | ((val: T) => T)) => {
-      try {
-        const valueToStore = value instanceof Function ? value(storedValue) : value;
-        setStoredValue(valueToStore);
-        window.localStorage.setItem(key, JSON.stringify(valueToStore));
-      } catch (error) {
-        console.error('Error saving to localStorage', error);
-      }
-    },
-    [key, storedValue]
-  );
+  const setValue = useCallback((value: T | ((val: T) => T)) => {
+    try {
+      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      setStoredValue(valueToStore);
+      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+    } catch (error) {
+      console.error('Error saving to localStorage', error);
+    }
+  }, [key, storedValue]);
 
   return [storedValue, setValue] as const;
 }
