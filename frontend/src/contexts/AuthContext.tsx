@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { User, UserRole } from '../types';
 import { authApi } from '../api';
+import { AUTH_EVENTS } from '../api/client';
 
 interface AuthState {
   user: User | null;
@@ -14,39 +15,49 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   requestOTP: (email: string) => Promise<void>;
   verifyOTP: (email: string, otp: string) => Promise<void>;
-  fetchCurrentUser: () => Promise<void>;
-  logout: () => Promise<void>;
+  logout: () => void;
   clearError: () => void;
   clearOTPState: () => void;
-  setUser: (user: User) => void;
   userRole: UserRole | null;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    isAuthenticated: false,
-    isLoading: true,
-    error: null,
-    otpSent: false,
-    otpEmail: null,
-  });
+const initialState: AuthState = {
+  user: null,
+  isAuthenticated: false,
+  isLoading: true,
+  error: null,
+  otpSent: false,
+  otpEmail: null,
+};
 
-  // Validate session on initial load
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [state, setState] = useState<AuthState>(initialState);
+
+  // Handle session expiry from API client
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setState({
+        ...initialState,
+        isLoading: false,
+      });
+    };
+
+    window.addEventListener(AUTH_EVENTS.SESSION_EXPIRED, handleSessionExpired);
+    return () => window.removeEventListener(AUTH_EVENTS.SESSION_EXPIRED, handleSessionExpired);
+  }, []);
+
+  // Validate session on mount
   useEffect(() => {
     const validateSession = async () => {
-      // Check if we have a stored token
       if (!authApi.isAuthenticated()) {
         setState(prev => ({ ...prev, isLoading: false }));
         return;
       }
 
-      // Get stored user from localStorage
       const storedUser = authApi.getStoredUser();
 
-      // If we have stored user, use it and mark as authenticated
       if (storedUser) {
         setState(prev => ({
           ...prev,
@@ -55,19 +66,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           isLoading: false,
         }));
 
-        // Optionally refresh user data in background (don't logout on failure)
+        // Background refresh (silent fail)
         try {
           const freshUser = await authApi.getCurrentUser();
-          setState(prev => ({
-            ...prev,
-            user: freshUser,
-          }));
+          setState(prev => ({ ...prev, user: freshUser }));
         } catch {
-          // Silently fail - keep using stored user
-          // Token refresh is handled by fetchWithAuth in client.ts
+          // Keep using stored user
         }
       } else {
-        // No stored user but have token - must fetch from server
         try {
           const user = await authApi.getCurrentUser();
           setState(prev => ({
@@ -77,11 +83,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isLoading: false,
           }));
         } catch {
-          // Failed to get user - token is likely invalid
           setState(prev => ({
             ...prev,
-            user: null,
-            isAuthenticated: false,
             isLoading: false,
           }));
         }
@@ -102,11 +105,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         otpEmail: email,
       }));
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to send OTP';
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: message,
+        error: error instanceof Error ? error.message : 'Failed to send OTP',
       }));
       throw error;
     }
@@ -125,51 +127,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         otpEmail: null,
       }));
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Invalid OTP';
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: message,
+        error: error instanceof Error ? error.message : 'Invalid OTP',
       }));
       throw error;
     }
   }, []);
 
-  const fetchCurrentUser = useCallback(async () => {
-    setState(prev => ({ ...prev, isLoading: true }));
-    try {
-      const user = await authApi.getCurrentUser();
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        user,
-        isAuthenticated: true,
-      }));
-    } catch (error: unknown) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        isAuthenticated: false,
-        user: null,
-      }));
-      throw error;
-    }
-  }, []);
-
-  const logout = useCallback(async () => {
-    try {
-      await authApi.logout();
-    } catch {
-      // Ignore logout errors, clear state anyway
-    }
-    setState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-      otpSent: false,
-      otpEmail: null,
-    });
+  const logout = useCallback(() => {
+    authApi.logout().catch(() => {});
+    setState({ ...initialState, isLoading: false });
   }, []);
 
   const clearError = useCallback(() => {
@@ -180,22 +149,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setState(prev => ({ ...prev, otpSent: false, otpEmail: null }));
   }, []);
 
-  const setUser = useCallback((user: User) => {
-    setState(prev => ({ ...prev, user, isAuthenticated: true }));
-  }, []);
-
-  const userRole: UserRole | null = state.user?.role || null;
-
   const value: AuthContextValue = {
     ...state,
     requestOTP,
     verifyOTP,
-    fetchCurrentUser,
     logout,
     clearError,
     clearOTPState,
-    setUser,
-    userRole,
+    userRole: state.user?.role || null,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -203,7 +164,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 export const useAuth = (): AuthContextValue => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

@@ -6,104 +6,119 @@ const ACCESS_TOKEN_KEY = 'erp_access_token';
 const REFRESH_TOKEN_KEY = 'erp_refresh_token';
 const USER_KEY = 'erp_user';
 
+// Auth event for session expiry - components can listen to this
+export const AUTH_EVENTS = {
+  SESSION_EXPIRED: 'auth:session_expired',
+};
+
+// Dispatch auth event
+const dispatchAuthEvent = (eventName: string) => {
+  window.dispatchEvent(new CustomEvent(eventName));
+};
+
 // Token management
 export const tokenManager = {
   getAccessToken: (): string | null => localStorage.getItem(ACCESS_TOKEN_KEY),
   getRefreshToken: (): string | null => localStorage.getItem(REFRESH_TOKEN_KEY),
-  
+
   setTokens: (access: string, refresh: string): void => {
     localStorage.setItem(ACCESS_TOKEN_KEY, access);
     localStorage.setItem(REFRESH_TOKEN_KEY, refresh);
   },
-  
+
   clearTokens: (): void => {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
   },
-  
+
   isAuthenticated: (): boolean => !!localStorage.getItem(ACCESS_TOKEN_KEY),
-  
+
   getUser: () => {
     const user = localStorage.getItem(USER_KEY);
     return user ? JSON.parse(user) : null;
   },
-  
+
   setUser: (user: unknown): void => {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
   },
 };
 
+// Flag to prevent multiple refresh attempts
+let isRefreshing = false;
+
 // Simple fetch wrapper with auth
 async function fetchWithAuth(url: string, options: RequestInit = {}) {
   const token = tokenManager.getAccessToken();
-  
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...options.headers as Record<string, string>,
   };
-  
+
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
-  
+
   try {
     const response = await fetch(`${API_BASE_URL}${url}`, {
       ...options,
       headers,
     });
-    
+
     if (!response.ok) {
-      // Handle 401 - try refresh token
-      if (response.status === 401) {
+      // Handle 401 - try refresh token once
+      if (response.status === 401 && !isRefreshing) {
         const refreshToken = tokenManager.getRefreshToken();
         if (refreshToken) {
+          isRefreshing = true;
           try {
             const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh/`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ refresh: refreshToken }),
             });
-            
+
             if (refreshResponse.ok) {
               const data = await refreshResponse.json();
               const newAccessToken = data.data?.access || data.access;
               tokenManager.setTokens(newAccessToken, refreshToken);
-              
+              isRefreshing = false;
+
               // Retry original request with new token
               headers.Authorization = `Bearer ${newAccessToken}`;
               const retryResponse = await fetch(`${API_BASE_URL}${url}`, {
                 ...options,
                 headers,
               });
-              
+
               if (!retryResponse.ok) {
                 throw new Error('Request failed after token refresh');
               }
               return retryResponse;
             }
-          } catch (refreshError) {
-            tokenManager.clearTokens();
-            window.location.href = '/auth/login';
-            throw new Error('Session expired. Please login again.');
+          } catch {
+            // Refresh failed
           }
-        } else {
-          tokenManager.clearTokens();
-          window.location.href = '/auth/login';
-          throw new Error('Session expired. Please login again.');
+          isRefreshing = false;
         }
+
+        // Clear tokens and dispatch event for React to handle
+        tokenManager.clearTokens();
+        dispatchAuthEvent(AUTH_EVENTS.SESSION_EXPIRED);
+        throw new Error('Session expired. Please login again.');
       }
-      
+
       // Extract error message from response
       const errorData = await response.json().catch(() => ({}));
-      const errorMessage = 
-        errorData.error?.message || 
-        errorData.message || 
+      const errorMessage =
+        errorData.error?.message ||
+        errorData.message ||
         `Request failed with status ${response.status}`;
-      
+
       throw new Error(errorMessage);
     }
-    
+
     return response;
   } catch (error) {
     if (error instanceof Error) {
@@ -113,10 +128,10 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
   }
 }
 
-// Generic request wrapper - same interface as before
+// Generic request wrapper
 export const api = {
   get: async <T>(url: string, params?: Record<string, unknown>): Promise<T> => {
-    const queryString = params ? '?' + new URLSearchParams(params as any).toString() : '';
+    const queryString = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : '';
     const response = await fetchWithAuth(`${url}${queryString}`);
     const data = await response.json();
     return data.data || data;
@@ -161,26 +176,26 @@ export const api = {
   upload: async <T>(url: string, formData: FormData): Promise<T> => {
     const token = tokenManager.getAccessToken();
     const headers: Record<string, string> = {};
-    
+
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
-    
+
     const response = await fetch(`${API_BASE_URL}${url}`, {
       method: 'POST',
       body: formData,
       headers,
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      const errorMessage = 
-        errorData.error?.message || 
-        errorData.message || 
+      const errorMessage =
+        errorData.error?.message ||
+        errorData.message ||
         `Upload failed with status ${response.status}`;
       throw new Error(errorMessage);
     }
-    
+
     const data = await response.json();
     return data.data || data;
   },
