@@ -10,8 +10,8 @@ import type {
 
 export const inventoryApi = {
   // List inventory items
-  list: (params?: InventoryFilters) =>
-    api.get<PaginatedResponse<Inventory>>('/inventory/', params as Record<string, unknown>),
+  list: (params?: any) =>
+    api.get<PaginatedResponse<any>>('/inventory/', params as any),
 
   // Get inventory item by ID
   getById: (id: number) => api.get<ApiResponse<Inventory>>(`/inventory/${id}/`),

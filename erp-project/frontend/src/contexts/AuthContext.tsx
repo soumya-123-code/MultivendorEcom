@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, UserRole } from '../types';
-import { authApi } from '../api';
+import { authApi, tokenManager } from '../api';
 
 interface AuthState {
   user: User | null;
@@ -24,20 +24,64 @@ interface AuthContextValue extends AuthState {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const getStoredAuth = () => {
+  const user = tokenManager.getUser();
+  const access = tokenManager.getAccessToken();
+
+  if (user && access) {
+    return {
+      isAuthenticated: true,
+      user,
+      isLoading: false,
+    };
+  }
+
+  return {
+    isAuthenticated: false,
+    user: null,
+    isLoading: false,
+  };
+};
+
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>({
     user: authApi.getStoredUser(),
     isAuthenticated: authApi.isAuthenticated(),
-    isLoading: false,
+    isLoading: true, // ✅ Start with loading true
     error: null,
     otpSent: false,
     otpEmail: null,
   });
 
+  // ✅ Initialize auth on mount
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        if (authApi.isAuthenticated()) {
+          await fetchCurrentUser();
+        }
+      } catch {
+        // Not authenticated
+      } finally {
+        setState(prev => ({ ...prev, isLoading: false }));
+      }
+    };
+    initAuth();
+  }, []);
+
+
+  useEffect(() => {
+  const handler = () => logout();
+  window.addEventListener("auth-logout", handler);
+  return () => window.removeEventListener("auth-logout", handler);
+}, []);
+
+
   const requestOTP = async (email: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     try {
-      const response = await authApi.requestOTP({ email });
+      await authApi.requestOTP({ email });
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -54,36 +98,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const verifyOTP = async (email: string, otp: string) => {
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
-    try {
-      const response = await authApi.verifyOTP({ email, otp });
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        isAuthenticated: true,
-        user: response.data?.user,
-        otpSent: false,
-        otpEmail: null,
-      }));
-    } catch (error: any) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error.message || 'Invalid OTP',
-      }));
-      throw error;
+const verifyOTP = async (email: string, otp: string) => {
+  setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+  try {
+    const response = await authApi.verifyOTP({ email, otp });
+console.log(response,"response_-")
+    if ( !response?.user) {
+      throw new Error("Invalid login response");
     }
-  };
+
+    const { user } = response;
+
+    setState(prev => ({
+      ...prev,
+      isLoading: false,
+      isAuthenticated: true,
+      user,
+      otpSent: false,
+      otpEmail: null,
+    }));
+  } catch (error: any) {
+    setState(prev => ({
+      ...prev,
+      isLoading: false,
+      error: error.message || 'Invalid OTP',
+    }));
+    throw error;
+  }
+};
+
 
   const fetchCurrentUser = async () => {
     setState(prev => ({ ...prev, isLoading: true }));
     try {
-      const response = await authApi.getCurrentUser();
-      setState(prev => ({
+      // ✅ getCurrentUser returns {data: user} - api.get unwraps it
+      const user = await authApi.getCurrentUser();
+      setState((prev:any) => ({
         ...prev,
         isLoading: false,
-        user: response.data,
+        user,
         isAuthenticated: true,
       }));
     } catch (error: any) {
@@ -123,10 +177,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setState(prev => ({ ...prev, user, isAuthenticated: true }));
   };
 
+  // ✅ Computed derived state - updates when user changes
   const userRole: UserRole | null = state.user?.role || null;
 
   const value: AuthContextValue = {
     ...state,
+    userRole, // ✅ This will trigger re-renders when user changes
     requestOTP,
     verifyOTP,
     fetchCurrentUser,
@@ -134,10 +190,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     clearError,
     clearOTPState,
     setUser,
-    userRole,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = (): AuthContextValue => {

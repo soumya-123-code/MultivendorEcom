@@ -98,6 +98,7 @@ export const router = createBrowserRouter([
       { path: 'reports', element: <PlaceholderPage title="Reports" /> },
       { path: 'settings', element: <PlaceholderPage title="Settings" /> },
       { path: 'profile', element: <PlaceholderPage title="Profile" /> },
+      
     ],
   },
   // Vendor Routes

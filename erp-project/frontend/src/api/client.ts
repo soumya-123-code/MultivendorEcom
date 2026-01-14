@@ -10,49 +10,75 @@ const USER_KEY = 'erp_user';
 export const tokenManager = {
   getAccessToken: (): string | null => localStorage.getItem(ACCESS_TOKEN_KEY),
   getRefreshToken: (): string | null => localStorage.getItem(REFRESH_TOKEN_KEY),
-  
+
   setTokens: (access: string, refresh: string): void => {
     localStorage.setItem(ACCESS_TOKEN_KEY, access);
     localStorage.setItem(REFRESH_TOKEN_KEY, refresh);
   },
-  
+
   clearTokens: (): void => {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
   },
-  
+
   isAuthenticated: (): boolean => !!localStorage.getItem(ACCESS_TOKEN_KEY),
-  
+
+
   getUser: () => {
     const user = localStorage.getItem(USER_KEY);
     return user ? JSON.parse(user) : null;
   },
-  
-  setUser: (user: unknown): void => {
+  getTokenPayload() {
+  const token = this.getAccessToken();
+  if (!token) return null;
+
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch {
+    return null;
+  }
+},
+
+isTokenExpired() {
+  const payload = this.getTokenPayload();
+  if (!payload?.exp) return true;
+  return payload.exp * 1000 < Date.now();
+}
+,
+
+  setUser: (user: any): void => {
+    console.log(user, "user")
     localStorage.setItem(USER_KEY, JSON.stringify(user));
   },
 };
 
+if (tokenManager.isTokenExpired()) {
+  tokenManager.clearTokens();
+  window.dispatchEvent(new Event("auth-logout"));
+  throw new Error("Session expired");
+}
+
+
 // Simple fetch wrapper with auth
 async function fetchWithAuth(url: string, options: RequestInit = {}) {
   const token = tokenManager.getAccessToken();
-  
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...options.headers as Record<string, string>,
   };
-  
+
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
-  
+
   try {
     const response = await fetch(`${API_BASE_URL}${url}`, {
       ...options,
       headers,
     });
-    
+
     if (!response.ok) {
       // Handle 401 - try refresh token
       if (response.status === 401) {
@@ -64,19 +90,22 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ refresh: refreshToken }),
             });
-            
+
             if (refreshResponse.ok) {
               const data = await refreshResponse.json();
-              const newAccessToken = data.data?.access || data.access;
+              console.log(data,"data")
+              const newAccessToken = data.access || data.data?.access;
+          // if (!newAccessToken) throw new Error("Invalid refresh response");
+
               tokenManager.setTokens(newAccessToken, refreshToken);
-              
+
               // Retry original request with new token
               headers.Authorization = `Bearer ${newAccessToken}`;
               const retryResponse = await fetch(`${API_BASE_URL}${url}`, {
                 ...options,
                 headers,
               });
-              
+
               if (!retryResponse.ok) {
                 throw new Error('Request failed after token refresh');
               }
@@ -84,26 +113,28 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
             }
           } catch (refreshError) {
             tokenManager.clearTokens();
-            window.location.href = '/auth/login';
-            throw new Error('Session expired. Please login again.');
+            window.dispatchEvent(new Event("auth-logout"));
+            throw new Error("Session expired");
           }
+
         } else {
           tokenManager.clearTokens();
-          window.location.href = '/auth/login';
-          throw new Error('Session expired. Please login again.');
+          window.dispatchEvent(new Event("auth-logout"));
+          throw new Error("Session expired");
         }
+
       }
-      
+
       // Extract error message from response
       const errorData = await response.json().catch(() => ({}));
-      const errorMessage = 
-        errorData.error?.message || 
-        errorData.message || 
+      const errorMessage =
+        errorData.error?.message ||
+        errorData.message ||
         `Request failed with status ${response.status}`;
-      
+
       throw new Error(errorMessage);
     }
-    
+
     return response;
   } catch (error) {
     if (error instanceof Error) {
@@ -161,26 +192,26 @@ export const api = {
   upload: async <T>(url: string, formData: FormData): Promise<T> => {
     const token = tokenManager.getAccessToken();
     const headers: Record<string, string> = {};
-    
+
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
-    
+
     const response = await fetch(`${API_BASE_URL}${url}`, {
       method: 'POST',
       body: formData,
       headers,
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      const errorMessage = 
-        errorData.error?.message || 
-        errorData.message || 
+      const errorMessage =
+        errorData.error?.message ||
+        errorData.message ||
         `Upload failed with status ${response.status}`;
       throw new Error(errorMessage);
     }
-    
+
     const data = await response.json();
     return data.data || data;
   },

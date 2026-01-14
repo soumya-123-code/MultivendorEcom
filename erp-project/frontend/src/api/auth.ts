@@ -7,14 +7,17 @@ export const authApi = {
     api.post<ApiResponse<{ otp_valid_for: number }>>('/auth/request-otp/', data),
 
   // Verify OTP and get tokens
-  verifyOTP: async (data: OTPVerify) => {
-    const response = await api.post<LoginResponse>('/auth/verify-otp/', data);
-    if (response.success && response.data) {
-      tokenManager.setTokens(response.data.access, response.data.refresh);
-      tokenManager.setUser(response.data.user);
-    }
-    return response;
-  },
+verifyOTP: async (data: OTPVerify) => {
+  const response = await api.post<LoginResponse>('/auth/verify-otp/', data);
+
+  if (response.success && response.data) {
+    tokenManager.setTokens(response.data.access, response.data.refresh);
+    tokenManager.setUser(response.data.user);
+  }
+
+  return response;
+}
+,
 
   // Refresh access token
   refreshToken: () =>
@@ -45,6 +48,8 @@ export const authApi = {
 
   // Get stored user
   getStoredUser: () => tokenManager.getUser(),
+
+  
 };
 
 export default authApi;

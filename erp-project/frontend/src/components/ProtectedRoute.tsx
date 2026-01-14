@@ -47,6 +47,7 @@ const getDefaultPath = (role: UserRole): string => {
 
 export const RoleRedirect: React.FC = () => {
   const { isAuthenticated, userRole } = useAuth();
+  console.log(userRole,"userRole")
 
   if (!isAuthenticated) {
     return <Navigate to="/auth/login" replace />;

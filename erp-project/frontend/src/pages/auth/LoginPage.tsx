@@ -11,15 +11,21 @@ const LoginPage: React.FC = () => {
   const [otp, setOtp] = useState('');
   const [countdown, setCountdown] = useState(0);
 
-  useEffect(() => {
-    if (isAuthenticated && userRole) {
-      const paths: Record<string, string> = {
-        super_admin: '/admin/dashboard', admin: '/admin/dashboard', vendor: '/vendor/dashboard',
-        warehouse: '/warehouse/dashboard', staff: '/warehouse/dashboard', delivery_agent: '/delivery/dashboard',
-      };
-      navigate(paths[userRole] || '/', { replace: true });
-    }
-  }, [isAuthenticated, userRole, navigate]);
+useEffect(() => {
+  if (isAuthenticated && userRole) {
+    const paths: Record<string, string> = {
+      super_admin: '/admin/dashboard',
+      admin: '/admin/dashboard',
+      vendor: '/vendor/dashboard',
+      warehouse: '/warehouse/dashboard',
+      staff: '/warehouse/dashboard',
+      delivery_agent: '/delivery/dashboard',
+    };
+
+    navigate(paths[userRole], { replace: true });
+  }
+}, [isAuthenticated, userRole]);
+
 
   useEffect(() => {
     if (countdown > 0) {
