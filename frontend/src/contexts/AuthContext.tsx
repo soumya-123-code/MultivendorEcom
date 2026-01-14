@@ -28,7 +28,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [state, setState] = useState<AuthState>({
     user: null,
     isAuthenticated: false,
-    isLoading: true, // Start with loading to check stored session
+    isLoading: true,
     error: null,
     otpSent: false,
     otpEmail: null,
@@ -43,8 +43,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      // Try to get stored user first for faster initial render
+      // Get stored user from localStorage
       const storedUser = authApi.getStoredUser();
+
+      // If we have stored user, use it and mark as authenticated
       if (storedUser) {
         setState(prev => ({
           ...prev,
@@ -52,25 +54,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           isAuthenticated: true,
           isLoading: false,
         }));
-      }
 
-      // Validate token by fetching current user from server
-      try {
-        const user = await authApi.getCurrentUser();
-        setState(prev => ({
-          ...prev,
-          user,
-          isAuthenticated: true,
-          isLoading: false,
-        }));
-      } catch {
-        // Token is invalid - clear and redirect will happen via ProtectedRoute
-        setState(prev => ({
-          ...prev,
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-        }));
+        // Optionally refresh user data in background (don't logout on failure)
+        try {
+          const freshUser = await authApi.getCurrentUser();
+          setState(prev => ({
+            ...prev,
+            user: freshUser,
+          }));
+        } catch {
+          // Silently fail - keep using stored user
+          // Token refresh is handled by fetchWithAuth in client.ts
+        }
+      } else {
+        // No stored user but have token - must fetch from server
+        try {
+          const user = await authApi.getCurrentUser();
+          setState(prev => ({
+            ...prev,
+            user,
+            isAuthenticated: true,
+            isLoading: false,
+          }));
+        } catch {
+          // Failed to get user - token is likely invalid
+          setState(prev => ({
+            ...prev,
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+          }));
+        }
       }
     };
 
