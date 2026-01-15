@@ -431,6 +431,11 @@ class Command(BaseCommand):
                     'is_featured': i < 5,
                     'rating': Decimal(str(round(random.uniform(3.5, 5.0), 2))),
                     'review_count': random.randint(10, 100),
+                    'images': [{
+                        'image': 'https://via.placeholder.com/800x800.png?text=' + data['name'].replace(' ', '+'),
+                        'alt_text': data['name'],
+                        'is_primary': True
+                    }]
                 }
             )
             products.append(product)

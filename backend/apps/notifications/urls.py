@@ -11,14 +11,11 @@ from apps.notifications.views import (
 )
 
 router = DefaultRouter()
+router.register('templates', NotificationTemplateViewSet, basename='notification-templates')
 router.register('', NotificationViewSet, basename='notifications')
-
-template_router = DefaultRouter()
-template_router.register('templates', NotificationTemplateViewSet, basename='notification-templates')
 
 urlpatterns = [
     path('send/', SendNotificationView.as_view(), name='send-notification'),
     path('broadcast/', BroadcastNotificationView.as_view(), name='broadcast-notification'),
     path('', include(router.urls)),
-    path('', include(template_router.urls)),
 ]

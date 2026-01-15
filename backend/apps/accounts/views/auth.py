@@ -8,6 +8,11 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.throttling import AnonRateThrottle
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
+from rest_framework import viewsets
+from apps.accounts.models.otp import OTPRequest
+from apps.accounts.serializers.auth import OTPRequestModelSerializer
+from core.permissions import IsAdmin
+
 from apps.accounts.serializers import (
     RequestOTPSerializer,
     VerifyOTPSerializer,
@@ -150,3 +155,16 @@ class LogoutView(APIView):
             'success': True,
             'data': result
         }, status=status.HTTP_200_OK)
+
+
+
+
+class OTPRequestViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Admin viewset for viewing OTP requests.
+    """
+    queryset = OTPRequest.objects.all()
+    serializer_class = OTPRequestModelSerializer
+    permission_classes = [IsAdmin]
+    filterset_fields = ['email', 'is_used', 'ip_address']
+    search_fields = ['email', 'ip_address']

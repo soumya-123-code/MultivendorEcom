@@ -338,14 +338,17 @@ export default function Dashboard() {
         paymentAPI.getSummary(),
       ]);
 
-      const salesResults = sales.results || [];
-      const purchaseResults = purchases.results || [];
+      const salesResults = sales.data || sales.results || [];
+      const purchaseResults = purchases.data || purchases.results || [];
+      const inventoryData = inventory.data || inventory;
+      const lowStockData = lowStock.data || lowStock;
+      const paymentsData = payments.data || payments;
 
       setStats({
         inventory: {
-          total: inventory.total_items || 0,
-          lowStock: lowStock.count || 0,
-          outOfStock: inventory.out_of_stock_items || 0,
+          total: inventoryData.total_items || 0,
+          lowStock: lowStockData.count || 0,
+          outOfStock: inventoryData.out_of_stock_items || 0,
         },
         salesOrders: {
           total: sales.count || 0,
@@ -360,9 +363,9 @@ export default function Dashboard() {
           approved: purchaseResults.filter((o: any) => o.status === 'approved').length || 0,
         },
         payments: {
-          total: payments.total_transactions || 0,
-          pending: payments.pending_transactions || 0,
-          completed: payments.completed_transactions || 0,
+          total: paymentsData.total_transactions || 0,
+          pending: paymentsData.pending_transactions || 0,
+          completed: paymentsData.completed_transactions || 0,
         },
       });
     } catch (error) {
@@ -420,195 +423,195 @@ export default function Dashboard() {
       </Box>
 
       {/* Main Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} lg={3}>
-          <StatCard
-            title="Total Inventory"
-            value={stats.inventory.total.toLocaleString()}
-            subtitle={`${stats.inventory.lowStock} low stock`}
-            icon={<InventoryIcon sx={{ color: 'white', fontSize: 32 }} />}
-            gradient="linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)"
-            trend={stats.inventory.lowStock > 5 ? 'down' : 'up'}
-            trendValue={stats.inventory.lowStock > 5 ? 'Needs attention' : 'Healthy'}
-            progressValue={Math.max(0, 100 - (stats.inventory.lowStock / Math.max(stats.inventory.total, 1)) * 100)}
-            progressColor="#6366f1"
-          />
-        </Grid>
+   <Grid container spacing={3} sx={{ mb: 4 }}>
+  <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+    <StatCard
+      title="Total Inventory"
+      value={stats.inventory.total.toLocaleString()}
+      subtitle={`${stats.inventory.lowStock} low stock`}
+      icon={<InventoryIcon sx={{ color: 'white', fontSize: 32 }} />}
+      gradient="linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)"
+      trend={stats.inventory.lowStock > 5 ? 'down' : 'up'}
+      trendValue={stats.inventory.lowStock > 5 ? 'Needs attention' : 'Healthy'}
+      progressValue={Math.max(0, 100 - (stats.inventory.lowStock / Math.max(stats.inventory.total, 1)) * 100)}
+      progressColor="#6366f1"
+    />
+  </Grid>
 
-        <Grid item xs={12} sm={6} lg={3}>
-          <StatCard
-            title="Sales Orders"
-            value={stats.salesOrders.total.toLocaleString()}
-            subtitle={`${stats.salesOrders.pending} pending`}
-            icon={<ShoppingCartIcon sx={{ color: 'white', fontSize: 32 }} />}
-            gradient="linear-gradient(135deg, #10b981 0%, #14b8a6 100%)"
-            trend="up"
-            trendValue={`${stats.salesOrders.completed} completed`}
-            progressValue={Math.round((stats.salesOrders.completed / Math.max(stats.salesOrders.total, 1)) * 100)}
-            progressColor="#10b981"
-          />
-        </Grid>
+  <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+    <StatCard
+      title="Sales Orders"
+      value={stats.salesOrders.total.toLocaleString()}
+      subtitle={`${stats.salesOrders.pending} pending`}
+      icon={<ShoppingCartIcon sx={{ color: 'white', fontSize: 32 }} />}
+      gradient="linear-gradient(135deg, #10b981 0%, #14b8a6 100%)"
+      trend="up"
+      trendValue={`${stats.salesOrders.completed} completed`}
+      progressValue={Math.round((stats.salesOrders.completed / Math.max(stats.salesOrders.total, 1)) * 100)}
+      progressColor="#10b981"
+    />
+  </Grid>
 
-        <Grid item xs={12} sm={6} lg={3}>
-          <StatCard
-            title="Purchase Orders"
-            value={stats.purchaseOrders.total.toLocaleString()}
-            subtitle={`${stats.purchaseOrders.pending} pending`}
-            icon={<LocalShippingIcon sx={{ color: 'white', fontSize: 32 }} />}
-            gradient="linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)"
-            trend="neutral"
-            trendValue={`${stats.purchaseOrders.approved} approved`}
-            progressValue={Math.round((stats.purchaseOrders.approved / Math.max(stats.purchaseOrders.total, 1)) * 100)}
-            progressColor="#f59e0b"
-          />
-        </Grid>
+  <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+    <StatCard
+      title="Purchase Orders"
+      value={stats.purchaseOrders.total.toLocaleString()}
+      subtitle={`${stats.purchaseOrders.pending} pending`}
+      icon={<LocalShippingIcon sx={{ color: 'white', fontSize: 32 }} />}
+      gradient="linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)"
+      trend="neutral"
+      trendValue={`${stats.purchaseOrders.approved} approved`}
+      progressValue={Math.round((stats.purchaseOrders.approved / Math.max(stats.purchaseOrders.total, 1)) * 100)}
+      progressColor="#f59e0b"
+    />
+  </Grid>
 
-        <Grid item xs={12} sm={6} lg={3}>
-          <StatCard
-            title="Payments"
-            value={stats.payments.total.toLocaleString()}
-            subtitle={`${stats.payments.pending} pending`}
-            icon={<TrendingUpIcon sx={{ color: 'white', fontSize: 32 }} />}
-            gradient="linear-gradient(135deg, #ec4899 0%, #f472b6 100%)"
-            trend={stats.payments.pending > 0 ? 'down' : 'up'}
-            trendValue={stats.payments.pending > 0 ? `${stats.payments.pending} awaiting` : 'All clear'}
-            progressValue={Math.round((stats.payments.completed / Math.max(stats.payments.total, 1)) * 100)}
-            progressColor="#ec4899"
-          />
-        </Grid>
-      </Grid>
+  <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+    <StatCard
+      title="Payments"
+      value={stats.payments.total.toLocaleString()}
+      subtitle={`${stats.payments.pending} pending`}
+      icon={<TrendingUpIcon sx={{ color: 'white', fontSize: 32 }} />}
+      gradient="linear-gradient(135deg, #ec4899 0%, #f472b6 100%)"
+      trend={stats.payments.pending > 0 ? 'down' : 'up'}
+      trendValue={stats.payments.pending > 0 ? `${stats.payments.pending} awaiting` : 'All clear'}
+      progressValue={Math.round((stats.payments.completed / Math.max(stats.payments.total, 1)) * 100)}
+      progressColor="#ec4899"
+    />
+  </Grid>
+</Grid>
 
-      {/* Quick Overview Cards */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <QuickActionCard
-            title="Inventory Status"
-            icon={<InventoryIcon />}
-            color="#6366f1"
-            items={[
-              {
-                label: 'In Stock Items',
-                value: Math.max(0, stats.inventory.total - stats.inventory.lowStock - stats.inventory.outOfStock),
-                status: 'success',
-              },
-              {
-                label: 'Low Stock Items',
-                value: stats.inventory.lowStock,
-                status: stats.inventory.lowStock > 0 ? 'warning' : 'success',
-              },
-              {
-                label: 'Out of Stock',
-                value: stats.inventory.outOfStock,
-                status: stats.inventory.outOfStock > 0 ? 'error' : 'success',
-              },
-            ]}
-          />
-        </Grid>
+{/* Quick Overview Cards */}
+<Grid container spacing={3}>
+  <Grid size={{ xs: 12, md: 6 }}>
+    <QuickActionCard
+      title="Inventory Status"
+      icon={<InventoryIcon />}
+      color="#6366f1"
+      items={[
+        {
+          label: 'In Stock Items',
+          value: Math.max(0, stats.inventory.total - stats.inventory.lowStock - stats.inventory.outOfStock),
+          status: 'success',
+        },
+        {
+          label: 'Low Stock Items',
+          value: stats.inventory.lowStock,
+          status: stats.inventory.lowStock > 0 ? 'warning' : 'success',
+        },
+        {
+          label: 'Out of Stock',
+          value: stats.inventory.outOfStock,
+          status: stats.inventory.outOfStock > 0 ? 'error' : 'success',
+        },
+      ]}
+    />
+  </Grid>
 
-        <Grid item xs={12} md={6}>
-          <QuickActionCard
-            title="Order Status"
-            icon={<ShoppingCartIcon />}
-            color="#10b981"
-            items={[
-              {
-                label: 'Completed Orders',
-                value: stats.salesOrders.completed,
-                status: 'success',
-              },
-              {
-                label: 'Pending Orders',
-                value: stats.salesOrders.pending,
-                status: stats.salesOrders.pending > 0 ? 'info' : 'success',
-              },
-              {
-                label: 'Processing',
-                value: Math.max(0, stats.salesOrders.total - stats.salesOrders.pending - stats.salesOrders.completed),
-                status: 'info',
-              },
-            ]}
-          />
-        </Grid>
+  <Grid size={{ xs: 12, md: 6 }}>
+    <QuickActionCard
+      title="Order Status"
+      icon={<ShoppingCartIcon />}
+      color="#10b981"
+      items={[
+        {
+          label: 'Completed Orders',
+          value: stats.salesOrders.completed,
+          status: 'success',
+        },
+        {
+          label: 'Pending Orders',
+          value: stats.salesOrders.pending,
+          status: stats.salesOrders.pending > 0 ? 'info' : 'success',
+        },
+        {
+          label: 'Processing',
+          value: Math.max(0, stats.salesOrders.total - stats.salesOrders.pending - stats.salesOrders.completed),
+          status: 'info',
+        },
+      ]}
+    />
+  </Grid>
 
-        <Grid item xs={12}>
-          <Paper
+  <Grid size={{ xs: 12 }}>
+    <Paper
+      sx={{
+        p: 4,
+        borderRadius: 4,
+        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
+        color: 'white',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Background decorations */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: -100,
+          right: -100,
+          width: 300,
+          height: 300,
+          borderRadius: '50%',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: -50,
+          left: -50,
+          width: 200,
+          height: 200,
+          borderRadius: '50%',
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        }}
+      />
+
+      <Box position="relative" zIndex={1}>
+        <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+          Welcome to Your ERP Dashboard
+        </Typography>
+        <Typography
+          variant="body1"
+          sx={{ opacity: 0.9, maxWidth: 600, mb: 2 }}
+        >
+          Manage your inventory, track orders, monitor payments, and streamline
+          your entire business operations from one centralized platform.
+        </Typography>
+        <Box display="flex" gap={2} flexWrap="wrap">
+          <Chip
+            label="Real-time Analytics"
             sx={{
-              p: 4,
-              borderRadius: 4,
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
               color: 'white',
-              position: 'relative',
-              overflow: 'hidden',
+              fontWeight: 600,
+              backdropFilter: 'blur(10px)',
             }}
-          >
-            {/* Background decorations */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: -100,
-                right: -100,
-                width: 300,
-                height: 300,
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              }}
-            />
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: -50,
-                left: -50,
-                width: 200,
-                height: 200,
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              }}
-            />
-
-            <Box position="relative" zIndex={1}>
-              <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-                Welcome to Your ERP Dashboard
-              </Typography>
-              <Typography
-                variant="body1"
-                sx={{ opacity: 0.9, maxWidth: 600, mb: 2 }}
-              >
-                Manage your inventory, track orders, monitor payments, and streamline
-                your entire business operations from one centralized platform.
-              </Typography>
-              <Box display="flex" gap={2} flexWrap="wrap">
-                <Chip
-                  label="Real-time Analytics"
-                  sx={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    color: 'white',
-                    fontWeight: 600,
-                    backdropFilter: 'blur(10px)',
-                  }}
-                />
-                <Chip
-                  label="Multi-vendor Support"
-                  sx={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    color: 'white',
-                    fontWeight: 600,
-                    backdropFilter: 'blur(10px)',
-                  }}
-                />
-                <Chip
-                  label="Automated Workflows"
-                  sx={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    color: 'white',
-                    fontWeight: 600,
-                    backdropFilter: 'blur(10px)',
-                  }}
-                />
-              </Box>
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
+          />
+          <Chip
+            label="Multi-vendor Support"
+            sx={{
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              fontWeight: 600,
+              backdropFilter: 'blur(10px)',
+            }}
+          />
+          <Chip
+            label="Automated Workflows"
+            sx={{
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              fontWeight: 600,
+              backdropFilter: 'blur(10px)',
+            }}
+          />
+        </Box>
+      </Box>
+    </Paper>
+  </Grid>
+</Grid>
     </Box>
   );
 }

@@ -1,8 +1,10 @@
 """
 Vendor serializers.
 """
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from apps.vendors.models import Vendor, Supplier
+from apps.vendors.models.vendor import VendorStaff
 from apps.accounts.serializers.user import UserMinimalSerializer
 from core.utils.helpers import slugify_unique
 
@@ -117,3 +119,18 @@ class SupplierCreateSerializer(serializers.ModelSerializer):
             'tax_id', 'payment_terms',
             'bank_name', 'bank_account', 'bank_ifsc', 'notes'
         ]
+
+
+class VendorStaffSerializer(serializers.ModelSerializer):
+    """Serializer for vendor staff."""
+    user = UserMinimalSerializer(read_only=True)
+    user_id = serializers.PrimaryKeyRelatedField(
+        source='user',
+        queryset=get_user_model().objects.all(),
+        write_only=True
+    )
+    
+    class Meta:
+        model = VendorStaff
+        fields = ['id', 'vendor', 'user', 'user_id', 'role', 'permissions', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'vendor', 'created_at', 'updated_at']

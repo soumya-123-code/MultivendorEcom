@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Box, Button, Paper, Typography, Chip, Alert, Tabs, Tab } from '@mui/material';
+import { Box, Paper, Typography, Chip, Alert, Tabs, Tab, IconButton, Dialog, DialogTitle, DialogContent, List, ListItem, ListItemText, Divider } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { Visibility } from '@mui/icons-material';
 import { inventoryAPI } from '../utils/api';
 
 export default function InventoryPage() {
@@ -8,6 +9,9 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tab, setTab] = useState(0);
+  const [logsOpen, setLogsOpen] = useState(false);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
 
   useEffect(() => { loadData(); }, [tab]);
 
@@ -22,6 +26,18 @@ export default function InventoryPage() {
       setError(error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleViewLogs = async (item: any) => {
+    setSelectedItem(item);
+    try {
+      const res = await inventoryAPI.getLogs(item.id);
+      setLogs(res.data || []);
+      setLogsOpen(true);
+    } catch (error: any) {
+      console.error(error);
+      alert('Failed to load logs');
     }
   };
 
@@ -44,6 +60,16 @@ export default function InventoryPage() {
         return <Chip label="In Stock" color="success" size="small" />;
       },
     },
+    {
+      field: 'actions',
+      headerName: 'Logs',
+      width: 80,
+      renderCell: (params) => (
+        <IconButton size="small" onClick={() => handleViewLogs(params.row)}>
+          <Visibility />
+        </IconButton>
+      ),
+    },
   ];
 
   return (
@@ -56,6 +82,25 @@ export default function InventoryPage() {
         <Tab label="Out of Stock" />
       </Tabs>
       <Paper><DataGrid rows={inventory} columns={columns} loading={loading} pageSizeOptions={[10, 25, 50]} /></Paper>
+
+      <Dialog open={logsOpen} onClose={() => setLogsOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle>Inventory Logs - {selectedItem?.product_name}</DialogTitle>
+        <DialogContent>
+          <List>
+            {logs.length > 0 ? logs.map((log: any, index: number) => (
+              <Box key={index}>
+                <ListItem>
+                  <ListItemText
+                    primary={`${log.movement_type} - Qty: ${log.quantity}`}
+                    secondary={`${new Date(log.created_at).toLocaleString()} - ${log.notes || ''}`}
+                  />
+                </ListItem>
+                <Divider />
+              </Box>
+            )) : <Typography p={2}>No logs found.</Typography>}
+          </List>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

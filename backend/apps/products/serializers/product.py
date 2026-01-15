@@ -8,11 +8,12 @@ from apps.products.serializers.category import CategoryListSerializer
 
 class ProductVariantSerializer(serializers.ModelSerializer):
     """Product variant serializer."""
+    product_name = serializers.CharField(source='product.name', read_only=True)
     
     class Meta:
         model = ProductVariant
         fields = [
-            'id', 'name', 'sku', 'barcode', 'attributes',
+            'id', 'product', 'product_name', 'name', 'sku', 'barcode', 'attributes',
             'price', 'compare_at_price', 'cost_price',
             'weight', 'dimensions', 'image', 'position',
             'is_active', 'created_at', 'updated_at'

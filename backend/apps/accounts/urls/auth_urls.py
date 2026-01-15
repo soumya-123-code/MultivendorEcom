@@ -1,17 +1,23 @@
 """
 Authentication URL patterns.
 """
-from django.urls import path
+from django.urls import path, include
 from apps.accounts.views import (
     RequestOTPView,
     VerifyOTPView,
     TokenRefreshView,
     LogoutView,
+    OTPRequestViewSet,
 )
+from rest_framework.routers import DefaultRouter
+
+router = DefaultRouter()
+router.register('otp-requests', OTPRequestViewSet, basename='otp-requests')
 
 urlpatterns = [
     path('request-otp/', RequestOTPView.as_view(), name='request-otp'),
     path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
     path('refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('logout/', LogoutView.as_view(), name='logout'),
+    path('', include(router.urls)),
 ]

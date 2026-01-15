@@ -3,16 +3,17 @@ Vendor URL patterns.
 """
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from apps.vendors.views import VendorViewSet, CurrentVendorView, SupplierViewSet
+from apps.vendors.views import VendorViewSet, CurrentVendorView, SupplierViewSet, VendorStaffViewSet
 
 router = DefaultRouter()
-router.register('', VendorViewSet, basename='vendors')
+router.register('suppliers', SupplierViewSet, basename='suppliers')
+router.register('staff', VendorStaffViewSet, basename='vendor-staff')
 
-supplier_router = DefaultRouter()
-supplier_router.register('suppliers', SupplierViewSet, basename='suppliers')
+vendor_router = DefaultRouter()
+vendor_router.register('', VendorViewSet, basename='vendors')
 
 urlpatterns = [
     path('me/', CurrentVendorView.as_view(), name='current-vendor'),
     path('', include(router.urls)),
-    path('', include(supplier_router.urls)),
+    path('', include(vendor_router.urls)),
 ]

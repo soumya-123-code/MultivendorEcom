@@ -44,10 +44,9 @@ npm run build
 
 ```
 src/
-├── api/           # API client and service functions
+├── utils/           # API client and service functions
 ├── components/    # Reusable UI components
 ├── contexts/      # React contexts (Auth, UI)
-├── layouts/       # Layout components (MainLayout, AuthLayout)
 ├── pages/         # Page components by role
 │   ├── admin/     # Admin pages
 │   ├── auth/      # Authentication pages

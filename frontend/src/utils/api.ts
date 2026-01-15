@@ -81,10 +81,13 @@ const refreshAccessToken = async (): Promise<string> => {
 export const api = async (endpoint: string, options: RequestInit = {}, retryCount = 0): Promise<any> => {
   const token = getToken();
   
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
+  const headers: any = {
     ...options.headers,
   };
+
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -216,6 +219,53 @@ export const productAPI = {
     }),
 };
 
+// Product Variant APIs
+export const productVariantAPI = {
+  getAll: (productId?: number) => {
+    if (productId) return api(`/products/variants/?product=${productId}`);
+    return api('/products/variants/');
+  },
+  
+  create: (productId: number, data: any) =>
+    api('/products/variants/', {
+      method: 'POST',
+      body: JSON.stringify({ ...data, product: productId }),
+    }),
+
+  update: (productId: number, id: number, data: any) =>
+    api(`/products/variants/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (productId: number, id: number) =>
+    api(`/products/variants/${id}/`, {
+      method: 'DELETE',
+    }),
+};
+
+// Product Image APIs
+export const productImageAPI = {
+  getAll: (productId: number) => api(`/products/${productId}/images/`),
+  
+  create: (productId: number, formData: FormData) =>
+    api(`/products/${productId}/images/`, {
+      method: 'POST',
+      body: formData, // FormData handles Content-Type automatically
+      headers: {}, // Let browser set boundary
+    }),
+
+  delete: (productId: number, id: number) =>
+    api(`/products/${productId}/images/${id}/`, {
+      method: 'DELETE',
+    }),
+    
+  setPrimary: (productId: number, id: number) =>
+    api(`/products/${productId}/images/${id}/set-primary/`, {
+      method: 'POST',
+    }),
+};
+
 // Category APIs
 export const categoryAPI = {
   getAll: () => api('/categories/'),
@@ -271,6 +321,17 @@ export const warehouseAPI = {
       body: JSON.stringify(data),
     }),
 
+  updateLocation: (id: number, data: any) =>
+    api(`/warehouses/locations/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  deleteLocation: (id: number) =>
+    api(`/warehouses/locations/${id}/`, {
+      method: 'DELETE',
+    }),
+
   getStats: (id: number) => api(`/warehouses/${id}/stats/`),
 };
 
@@ -323,6 +384,17 @@ export const inventoryAPI = {
   getOutOfStock: () => api('/inventory/out-of-stock/'),
   
   getSummary: () => api('/inventory/summary/'),
+  
+  getLogs: (id: number) => api(`/inventory/${id}/logs/`),
+};
+
+// Inventory Log APIs (Global)
+export const inventoryLogAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/inventory/logs/${query}`);
+  },
+  getOne: (id: number) => api(`/inventory/logs/${id}/`),
 };
 
 // Sales Order APIs
@@ -562,6 +634,17 @@ export const deliveryAPI = {
       method: 'POST',
       body: JSON.stringify({ new_agent_id: agentId }),
     }),
+
+  getProofs: (id: number) => api(`/deliveries/${id}/proofs/`),
+};
+
+// Delivery Proof APIs (Admin/Vendor View)
+export const deliveryProofAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/delivery-proofs/${query}`);
+  },
+  getOne: (id: number) => api(`/delivery-proofs/${id}/`),
 };
 
 // Notification APIs
@@ -594,6 +677,43 @@ export const notificationAPI = {
 
   clearAll: () =>
     api('/notifications/clear-all/', {
+      method: 'DELETE',
+    }),
+    
+  // Admin only
+  send: (data: any) =>
+    api('/notifications/send/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    
+  broadcast: (data: any) =>
+    api('/notifications/broadcast/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+};
+
+// Notification Template APIs
+export const notificationTemplateAPI = {
+  getAll: () => api('/notifications/templates/'),
+  
+  getOne: (id: number) => api(`/notifications/templates/${id}/`),
+  
+  create: (data: any) =>
+    api('/notifications/templates/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    
+  update: (id: number, data: any) =>
+    api(`/notifications/templates/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+    
+  delete: (id: number) =>
+    api(`/notifications/templates/${id}/`, {
       method: 'DELETE',
     }),
 };
@@ -638,10 +758,10 @@ export const refundAPI = {
       body: JSON.stringify(data),
     }),
 
-  process: (id: number, status: 'approved' | 'rejected', notes?: string) =>
+  process: (id: number, action: 'approve' | 'reject', notes?: string) =>
     api(`/payments/refunds/${id}/process/`, {
       method: 'POST',
-      body: JSON.stringify({ status, notes }),
+      body: JSON.stringify({ action, notes }),
     }),
 };
 
@@ -697,6 +817,28 @@ export const vendorAPI = {
     api(`/vendors/${id}/`, {
       method: 'DELETE',
     }),
+
+  approve: (id: number) =>
+    api(`/vendors/${id}/approve/`, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'approve' }),
+    }),
+
+  reject: (id: number, reason: string) =>
+    api(`/vendors/${id}/reject/`, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'reject', reason }),
+    }),
+
+  suspend: (id: number) =>
+    api(`/vendors/${id}/suspend/`, {
+      method: 'POST',
+    }),
+
+  reactivate: (id: number) =>
+    api(`/vendors/${id}/reactivate/`, {
+      method: 'POST',
+    }),
 };
 
 // Supplier APIs
@@ -732,6 +874,12 @@ export const userAPI = {
 
   getOne: (id: number) => api(`/users/${id}/`),
 
+  create: (data: any) => api('/users/', { method: 'POST', body: JSON.stringify(data) }),
+  
+  update: (id: number, data: any) => api(`/users/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+  
+  delete: (id: number) => api(`/users/${id}/`, { method: 'DELETE' }),
+
   getMe: () => api('/users/me/'),
 
   updateMe: (data: any) =>
@@ -745,4 +893,167 @@ export const userAPI = {
       method: 'POST',
       body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
     }),
+};
+
+// Activity Log APIs
+export const activityLogAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/activity-logs/${query}`);
+  },
+  getOne: (id: number) => api(`/activity-logs/${id}/`),
+};
+
+// Token Management APIs
+export const tokenAPI = {
+  getOutstanding: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/tokens/outstanding/${query}`);
+  },
+  getBlacklisted: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/tokens/blacklisted/${query}`);
+  },
+  blacklist: (refreshToken: string) => 
+    api('/tokens/blacklisted/', {
+        method: 'POST',
+        body: JSON.stringify({ refresh: refreshToken })
+    }),
+
+  deleteBlacklisted: (id: number) => 
+    api(`/tokens/blacklisted/${id}/`, {
+        method: 'DELETE',
+    }),
+};
+
+// OTP Request APIs
+export const otpRequestAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/auth/otp-requests/${query}`);
+  },
+  getOne: (id: number) => api(`/auth/otp-requests/${id}/`),
+};
+
+// Review APIs
+export const reviewAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/products/reviews/${query}`);
+  },
+  getOne: (id: number) => api(`/products/reviews/${id}/`),
+  create: (data: any) =>
+    api('/products/reviews/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: number, data: any) =>
+    api(`/products/reviews/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: number) =>
+    api(`/products/reviews/${id}/`, {
+      method: 'DELETE',
+    }),
+  approve: (id: number) =>
+    api(`/products/reviews/${id}/approve/`, {
+      method: 'POST',
+    }),
+};
+
+// Vendor Staff APIs
+export const vendorStaffAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/vendors/staff/${query}`);
+  },
+  getOne: (id: number) => api(`/vendors/staff/${id}/`),
+  create: (data: any) =>
+    api('/vendors/staff/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: number, data: any) =>
+    api(`/vendors/staff/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  delete: (id: number) =>
+    api(`/vendors/staff/${id}/`, {
+      method: 'DELETE',
+    }),
+};
+
+export const settingsAPI = {
+  store: {
+    getAll: (params?: any) => {
+      const query = params ? `?${new URLSearchParams(params)}` : '';
+      return api(`/settings/store/${query}`);
+    },
+    getActive: () => api('/settings/store/active/'),
+    update: (id: number, data: any) => api(`/settings/store/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+    create: (data: any) => api('/settings/store/', { method: 'POST', body: JSON.stringify(data) }),
+  },
+  currencies: {
+    getAll: () => api('/settings/currencies/'),
+    getOne: (id: number) => api(`/settings/currencies/${id}/`),
+    create: (data: any) => api('/settings/currencies/', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => api(`/settings/currencies/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: number) => api(`/settings/currencies/${id}/`, { method: 'DELETE' }),
+  },
+  locations: {
+    getAll: () => api('/settings/locations/'),
+    create: (data: any) => api('/settings/locations/', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => api(`/settings/locations/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: number) => api(`/settings/locations/${id}/`, { method: 'DELETE' }),
+  },
+  shipping: {
+    getAll: () => api('/settings/shipping/'),
+    create: (data: any) => api('/settings/shipping/', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => api(`/settings/shipping/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: number) => api(`/settings/shipping/${id}/`, { method: 'DELETE' }),
+    calculate: (payload: { cart_total: number; country?: string; weight?: number }) =>
+      api('/settings/shipping/calculate/', { method: 'POST', body: JSON.stringify(payload) }),
+  },
+  tax: {
+    getAll: () => api('/settings/tax/'),
+    create: (data: any) => api('/settings/tax/', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => api(`/settings/tax/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: number) => api(`/settings/tax/${id}/`, { method: 'DELETE' }),
+    calculate: (payload: { subtotal: number; country?: string; state?: string }) =>
+      api('/settings/tax/calculate/', { method: 'POST', body: JSON.stringify(payload) }),
+  },
+  checkout: {
+    getActive: () => api('/settings/checkout/active/'),
+    update: (id: number, data: any) => api(`/settings/checkout/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+  invoice: {
+    getActive: () => api('/settings/invoice/active/'),
+    update: (id: number, data: any) => api(`/settings/invoice/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+  returnPolicies: {
+    getAll: () => api('/settings/return-policies/'),
+    create: (data: any) => api('/settings/return-policies/', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => api(`/settings/return-policies/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: number) => api(`/settings/return-policies/${id}/`, { method: 'DELETE' }),
+  },
+};
+
+export const offersAPI = {
+  coupons: {
+    getAll: () => api('/offers/coupons/'),
+    getOne: (id: number) => api(`/offers/coupons/${id}/`),
+    create: (data: any) => api('/offers/coupons/', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => api(`/offers/coupons/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: number) => api(`/offers/coupons/${id}/`, { method: 'DELETE' }),
+    validate: (payload: { code: string; cart_total: number }) =>
+      api('/offers/coupons/validate/', { method: 'POST', body: JSON.stringify(payload) }),
+  },
+};
+
+export const returnsAPI = {
+  getAll: () => api('/returns/returns/'),
+  getOne: (id: number) => api(`/returns/returns/${id}/`),
+  create: (data: any) => api('/returns/returns/', { method: 'POST', body: JSON.stringify(data) }),
 };

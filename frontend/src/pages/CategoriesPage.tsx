@@ -1,3 +1,5 @@
+/* This code snippet is a TypeScript React component called `CategoriesPage` that manages product
+categories. Here's a breakdown of what the code does: */
 import { useEffect, useState } from 'react';
 import {
   Box,
@@ -17,9 +19,11 @@ import {
 } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Add, Edit, Delete } from '@mui/icons-material';
+import { useLocation } from 'react-router-dom';
 import { categoryAPI } from '../utils/api';
 
 export default function CategoriesPage() {
+  const location = useLocation();
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -46,6 +50,13 @@ export default function CategoriesPage() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('create') === 'true') {
+      openDialog();
+    }
+  }, [location.search]);
 
   const openDialog = (cat?: any) => {
     if (cat) {

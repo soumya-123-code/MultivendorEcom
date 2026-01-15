@@ -46,6 +46,9 @@ LOCAL_APPS = [
     'apps.sales_orders',
     'apps.payments',
     'apps.notifications',
+    'apps.settings',
+    'apps.offers',
+    'apps.returns',
     'core',
 ]
 
