@@ -1,7 +1,19 @@
 import { useEffect, useState } from 'react';
 import {
-  Box, Button, Paper, Typography, Dialog, DialogTitle,
-  DialogContent, DialogActions, TextField, IconButton, Alert
+  Box,
+  Button,
+  Paper,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  IconButton,
+  Stack,
+  Chip,
+  Tooltip,
+  Alert
 } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Add, Edit, Delete } from '@mui/icons-material';
@@ -22,9 +34,15 @@ export default function CategoriesPage() {
   });
 
   const load = async () => {
-    const res = await categoryAPI.getAll();
-    setCategories(res.data || []);
-    setLoading(false);
+    try {
+      setLoading(true);
+      const res = await categoryAPI.getAll();
+      setCategories(res.data || []);
+    } catch {
+      setError('Failed to load categories');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -46,53 +64,149 @@ export default function CategoriesPage() {
   };
 
   const save = async () => {
-    const payload = {
-      ...form,
-      slug: form.slug || form.name.toLowerCase().replace(/\s+/g, '-')
-    };
-    if (editing) await categoryAPI.update(editing.id, payload);
-    else await categoryAPI.create(payload);
-    setOpen(false);
+    try {
+      const payload = {
+        ...form,
+        slug: form.slug || form.name.toLowerCase().replace(/\s+/g, '-')
+      };
+      if (editing) await categoryAPI.update(editing.id, payload);
+      else await categoryAPI.create(payload);
+      setOpen(false);
+      load();
+    } catch {
+      setError('Failed to save category');
+    }
+  };
+
+  const remove = async (id: number) => {
+    if (!confirm('Delete this category?')) return;
+    await categoryAPI.delete(id);
     load();
   };
 
   const columns: GridColDef[] = [
-    { field: 'id', headerName: 'ID', width: 70 },
-    { field: 'name', headerName: 'Name', width: 200 },
-    { field: 'slug', headerName: 'Slug', width: 200 },
-    { field: 'level', headerName: 'Level', width: 80 },
+    { field: 'id', headerName: 'ID', width: 80 },
+    {
+      field: 'name',
+      headerName: 'Category',
+      flex: 1,
+      renderCell: p => (
+        <Typography fontWeight={600}>{p.value}</Typography>
+      )
+    },
+    {
+      field: 'slug',
+      headerName: 'Slug',
+      flex: 1,
+      renderCell: p => (
+        <Chip label={p.value} size="small" />
+      )
+    },
+    {
+      field: 'level',
+      headerName: 'Level',
+      width: 100,
+      renderCell: p => (
+        <Chip
+          label={`L${p.value}`}
+          size="small"
+          color="primary"
+          variant="outlined"
+        />
+      )
+    },
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 150,
+      width: 140,
+      sortable: false,
       renderCell: p => (
-        <>
-          <IconButton onClick={() => openDialog(p.row)}><Edit /></IconButton>
-          <IconButton onClick={() => categoryAPI.delete(p.row.id).then(load)}><Delete /></IconButton>
-        </>
+        <Stack direction="row" spacing={1}>
+          <Tooltip title="Edit">
+            <IconButton onClick={() => openDialog(p.row)} color="primary">
+              <Edit />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete">
+            <IconButton onClick={() => remove(p.row.id)} color="error">
+              <Delete />
+            </IconButton>
+          </Tooltip>
+        </Stack>
       )
     }
   ];
 
   return (
     <Box>
-      <Typography variant="h4" mb={2}>Categories</Typography>
-      <Button onClick={() => openDialog()} variant="contained">Add</Button>
+      {/* Header */}
+      <Stack direction="row" justifyContent="space-between" mb={3}>
+        <Box>
+          <Typography variant="h4" fontWeight={700}>Categories</Typography>
+          <Typography color="text.secondary">
+            Manage product categories
+          </Typography>
+        </Box>
 
-      <Paper sx={{ mt: 2 }}>
-        <DataGrid rows={categories} columns={columns} loading={loading} />
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={() => openDialog()}
+        >
+          Add Category
+        </Button>
+      </Stack>
+
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      {/* Table */}
+      <Paper sx={{ height: 520, borderRadius: 3 }}>
+        <DataGrid
+          rows={categories}
+          columns={columns}
+          loading={loading}
+          disableRowSelectionOnClick
+          pageSizeOptions={[10, 25, 50]}
+          sx={{
+            border: 0,
+            '& .MuiDataGrid-columnHeaders': {
+              backgroundColor: '#fff1f2',
+              fontWeight: 700
+            }
+          }}
+        />
       </Paper>
 
-      <Dialog open={open} onClose={() => setOpen(false)}>
-        <DialogTitle>{editing ? 'Edit' : 'Create'} Category</DialogTitle>
+      {/* Dialog */}
+      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          {editing ? 'Edit Category' : 'Create Category'}
+        </DialogTitle>
+
         <DialogContent>
-          <TextField fullWidth label="Name" value={form.name}
-            onChange={e => setForm({ ...form, name: e.target.value })} />
-          <TextField fullWidth label="Slug" value={form.slug}
-            onChange={e => setForm({ ...form, slug: e.target.value })} />
+          <Stack spacing={2} mt={1}>
+            <TextField
+              label="Category Name"
+              fullWidth
+              value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })}
+            />
+
+            <TextField
+              label="Slug"
+              fullWidth
+              value={form.slug}
+              onChange={e => setForm({ ...form, slug: e.target.value })}
+              helperText="Leave empty to auto-generate"
+            />
+          </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={save}>Save</Button>
+
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={save}>
+            {editing ? 'Update' : 'Create'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
