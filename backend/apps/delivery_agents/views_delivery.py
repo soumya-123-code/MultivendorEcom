@@ -154,6 +154,7 @@ class DeliveryViewSet(viewsets.ModelViewSet):
             'success': True,
             'data': DeliveryAssignmentSerializer(delivery).data
         })
+
     
     @extend_schema(tags=['Deliveries (Agent)'])
     @action(detail=True, methods=['post'])
@@ -481,3 +482,33 @@ class DeliveryViewSet(viewsets.ModelViewSet):
             'success': True,
             'data': DeliveryAssignmentSerializer(delivery).data
         })
+
+
+class DeliveryProofViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet for delivery proofs."""
+    serializer_class = DeliveryProofSerializer
+    permission_classes = [IsAuthenticated, IsVendorOrAdmin]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['assignment', 'proof_type']
+    ordering = ['-captured_at']
+    
+    def get_queryset(self):
+        user = self.request.user
+        queryset = DeliveryProof.objects.select_related(
+            'assignment', 'assignment__sales_order', 'assignment__delivery_agent'
+        )
+        
+        # Admins see all proofs
+        if user.role in ['super_admin', 'admin']:
+            return queryset
+        
+        # Vendors see proofs for their orders
+        if user.role == 'vendor' and hasattr(user, 'vendor'):
+            return queryset.filter(assignment__sales_order__vendor=user.vendor)
+        
+        # Delivery agents see proofs for their deliveries
+        if user.role == 'delivery_agent' and hasattr(user, 'delivery_agent'):
+            return queryset.filter(assignment__delivery_agent=user.delivery_agent)
+            
+        return queryset.none()
+

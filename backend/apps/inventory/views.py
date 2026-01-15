@@ -381,7 +381,7 @@ class InventoryViewSet(viewsets.ModelViewSet):
         })
     
     @extend_schema(tags=['Inventory'])
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='expiring-soon')
     def expiring_soon(self, request):
         """Get inventory items expiring soon (within 30 days)."""
         from django.utils import timezone
@@ -426,3 +426,36 @@ class InventoryViewSet(viewsets.ModelViewSet):
                 'by_status': by_status,
             }
         })
+
+
+class InventoryLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet for viewing inventory logs."""
+    serializer_class = InventoryLogSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    search_fields = ['product__name', 'product__sku', 'warehouse__name', 'notes']
+    ordering_fields = ['created_at', 'quantity', 'movement_type']
+    ordering = ['-created_at']
+    filterset_fields = ['warehouse', 'product', 'vendor', 'movement_type']
+    
+    def get_permissions(self):
+        return [IsAuthenticated(), IsVendorOrAdmin()]
+    
+    def get_queryset(self):
+        user = self.request.user
+        queryset = InventoryLog.objects.select_related(
+            'inventory', 'product', 'warehouse', 'vendor', 'created_by'
+        )
+        
+        # Admins see all logs
+        if user.role in ['super_admin', 'admin']:
+            return queryset
+        
+        # Vendors see only their logs
+        if hasattr(user, 'vendor'):
+            return queryset.filter(vendor=user.vendor)
+        
+        # Warehouse users see logs for their warehouse
+        if user.role == 'warehouse':
+            return queryset.filter(warehouse__manager=user)
+        
+        return queryset.none()

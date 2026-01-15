@@ -14,6 +14,7 @@ from drf_spectacular.views import (
 # API v1 URLs
 api_v1_patterns = [
     path('auth/', include('apps.accounts.urls.auth_urls')),
+    path('tokens/', include('apps.accounts.urls.token_urls')),
     path('users/', include('apps.accounts.urls.user_urls')),
     path('vendors/', include('apps.vendors.urls')),
     path('customers/', include('apps.customers.urls')),
@@ -27,7 +28,12 @@ api_v1_patterns = [
     path('cart/', include('apps.customers.urls_cart')),
     path('payments/', include('apps.payments.urls')),
     path('notifications/', include('apps.notifications.urls')),
+    path('activity-logs/', include('apps.accounts.urls.activity_urls')),
     path('deliveries/', include('apps.delivery_agents.urls_delivery')),
+    path('delivery-proofs/', include('apps.delivery_agents.urls_proofs')),
+    path('settings/', include('apps.settings.urls')),
+    path('offers/', include('apps.offers.urls')),
+    path('returns/', include('apps.returns.urls')),
 ]
 
 urlpatterns = [

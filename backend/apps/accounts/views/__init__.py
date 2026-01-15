@@ -3,6 +3,7 @@ from .auth import (
     VerifyOTPView,
     TokenRefreshView,
     LogoutView,
+    OTPRequestViewSet,
 )
 from .user import (
     CurrentUserView,
@@ -14,6 +15,7 @@ __all__ = [
     'VerifyOTPView',
     'TokenRefreshView',
     'LogoutView',
+    'OTPRequestViewSet',
     'CurrentUserView',
     'UserViewSet',
 ]

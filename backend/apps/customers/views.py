@@ -44,6 +44,31 @@ class CurrentCustomerView(APIView):
             'data': CustomerSerializer(customer).data
         })
 
+    @extend_schema(request=CustomerSerializer, responses={200: CustomerSerializer}, tags=['Customers'])
+    def put(self, request):
+        """Update current user's customer profile."""
+        customer, created = Customer.objects.get_or_create(user=request.user)
+        serializer = CustomerSerializer(customer, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({
+            'success': True,
+            'data': serializer.data
+        })
+
+    @extend_schema(responses={200: {'description': 'Account deleted successfully'}}, tags=['Customers'])
+    def delete(self, request):
+        """Delete current user's account."""
+        user = request.user
+        # Logic for soft delete or hard delete can go here. 
+        # For now, we will deactivate the user.
+        user.is_active = False
+        user.save()
+        return Response({
+            'success': True,
+            'message': 'Account deleted successfully.'
+        })
+
 
 class CustomerAddressViewSet(viewsets.ModelViewSet):
     """ViewSet for customer addresses."""

@@ -1,40 +1,8 @@
 import { useState, useEffect } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  MenuItem,
-  Stack,
-  IconButton,
-  Tooltip,
-  Alert,
-  Chip,
-  Tab,
-  Tabs,
-  Card,
-  CardContent,
-  Grid,
-} from '@mui/material';
+import { Box, Paper, Typography, Chip, Alert, Tabs, Tab, IconButton, Dialog, DialogTitle, DialogContent, List, ListItem, ListItemText, Divider } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import {
-  Add,
-  Edit,
-  Visibility,
-  SwapHoriz,
-  TrendingUp,
-  TrendingDown,
-  Inventory,
-  History,
-  Warning,
-} from '@mui/icons-material';
-import { inventoryAPI, warehouseAPI, productAPI, inventoryLogAPI } from '../utils/api';
-import { PageHeader, ConfirmDialog, DetailDrawer, DetailSection, DetailItem, StatusLogsTimeline } from '../components';
+import { Visibility } from '@mui/icons-material';
+import { inventoryAPI } from '../utils/api';
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<any[]>([]);
@@ -44,13 +12,9 @@ export default function InventoryPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [tab, setTab] = useState(0);
-  const [formOpen, setFormOpen] = useState(false);
-  const [adjustOpen, setAdjustOpen] = useState(false);
-  const [transferOpen, setTransferOpen] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
+  const [logsOpen, setLogsOpen] = useState(false);
+  const [logs, setLogs] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [inventoryLogs, setInventoryLogs] = useState<any[]>([]);
-  const [summary, setSummary] = useState<any>(null);
 
   const [form, setForm] = useState({
     product: '',
@@ -96,100 +60,16 @@ export default function InventoryPage() {
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, [tab]);
-
-  const loadInventoryLogs = async (id: number) => {
-    try {
-      const data = await inventoryLogAPI.getByInventory(id);
-      setInventoryLogs(data.results || data.data || data || []);
-    } catch (err) {
-      console.error('Failed to load inventory logs');
-    }
-  };
-
-  const openForm = (item?: any) => {
-    if (item) {
-      setSelectedItem(item);
-      setForm({
-        product: item.product?.id || item.product_id || '',
-        warehouse: item.warehouse?.id || item.warehouse_id || '',
-        quantity: item.quantity || '',
-        reorder_level: item.reorder_level || '10',
-        location: item.location || '',
-      });
-    } else {
-      setSelectedItem(null);
-      setForm({
-        product: '',
-        warehouse: '',
-        quantity: '',
-        reorder_level: '10',
-        location: '',
-      });
-    }
-    setFormOpen(true);
-  };
-
-  const openDetail = (item: any) => {
+  const handleViewLogs = async (item: any) => {
     setSelectedItem(item);
-    setDetailOpen(true);
-    loadInventoryLogs(item.id);
-  };
-
-  const handleSave = async () => {
     try {
-      if (selectedItem) {
-        await inventoryAPI.update(selectedItem.id, form);
-        setSuccess('Inventory updated successfully');
-      } else {
-        await inventoryAPI.create(form);
-        setSuccess('Inventory added successfully');
-      }
-      setFormOpen(false);
-      loadData();
-    } catch (err: any) {
-      setError(err.message);
+      const res = await inventoryAPI.getLogs(item.id);
+      setLogs(res.data || []);
+      setLogsOpen(true);
+    } catch (error: any) {
+      console.error(error);
+      alert('Failed to load logs');
     }
-  };
-
-  const handleAdjust = async () => {
-    if (!selectedItem) return;
-    try {
-      await inventoryAPI.adjust(selectedItem.id, parseInt(adjustForm.quantity), adjustForm.notes);
-      setSuccess('Inventory adjusted successfully');
-      setAdjustOpen(false);
-      setAdjustForm({ quantity: '', notes: '' });
-      loadData();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
-  const handleTransfer = async () => {
-    if (!selectedItem) return;
-    try {
-      await inventoryAPI.transfer(selectedItem.id, {
-        to_warehouse: transferForm.to_warehouse,
-        quantity: parseInt(transferForm.quantity),
-        notes: transferForm.notes,
-      });
-      setSuccess('Inventory transferred successfully');
-      setTransferOpen(false);
-      setTransferForm({ to_warehouse: '', quantity: '', notes: '' });
-      loadData();
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
-  const getStockStatus = (row: any) => {
-    const available = row.available_quantity ?? (row.quantity - (row.reserved_quantity || 0));
-    const reorder = row.reorder_level || 10;
-    if (available === 0) return { label: 'Out of Stock', color: 'error' };
-    if (available < reorder) return { label: 'Low Stock', color: 'warning' };
-    return { label: 'In Stock', color: 'success' };
   };
 
   const columns: GridColDef[] = [
@@ -243,46 +123,12 @@ export default function InventoryPage() {
     },
     {
       field: 'actions',
-      headerName: 'Actions',
-      width: 180,
-      sortable: false,
+      headerName: 'Logs',
+      width: 80,
       renderCell: (params) => (
-        <Stack direction="row" spacing={0.5}>
-          <Tooltip title="View Details">
-            <IconButton size="small" onClick={() => openDetail(params.row)}>
-              <Visibility fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Edit">
-            <IconButton size="small" onClick={() => openForm(params.row)}>
-              <Edit fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Adjust Quantity">
-            <IconButton
-              size="small"
-              color="info"
-              onClick={() => {
-                setSelectedItem(params.row);
-                setAdjustOpen(true);
-              }}
-            >
-              <TrendingUp fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Transfer">
-            <IconButton
-              size="small"
-              color="secondary"
-              onClick={() => {
-                setSelectedItem(params.row);
-                setTransferOpen(true);
-              }}
-            >
-              <SwapHoriz fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
+        <IconButton size="small" onClick={() => handleViewLogs(params.row)}>
+          <Visibility />
+        </IconButton>
       ),
     },
   ];
@@ -378,231 +224,26 @@ export default function InventoryPage() {
         <Tab label="Low Stock" icon={<Warning color="warning" />} iconPosition="end" />
         <Tab label="Out of Stock" icon={<Warning color="error" />} iconPosition="end" />
       </Tabs>
+      <Paper><DataGrid rows={inventory} columns={columns} loading={loading} pageSizeOptions={[10, 25, 50]} /></Paper>
 
-      <Paper sx={{ borderRadius: 3 }}>
-        <DataGrid
-          rows={inventory}
-          columns={columns}
-          loading={loading}
-          pageSizeOptions={[10, 25, 50]}
-          disableRowSelectionOnClick
-          autoHeight
-          sx={{
-            border: 0,
-            '& .MuiDataGrid-columnHeaders': { backgroundColor: '#f8fafc' },
-          }}
-        />
-      </Paper>
-
-      {/* Form Dialog */}
-      <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ background: 'linear-gradient(135deg, #ec4899, #d946ef)', color: 'white' }}>
-          {selectedItem ? 'Edit Inventory' : 'Add Inventory'}
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              select
-              label="Product"
-              value={form.product}
-              onChange={(e) => setForm({ ...form, product: e.target.value })}
-              fullWidth
-              required
-              disabled={!!selectedItem}
-            >
-              {products.map((p) => (
-                <MenuItem key={p.id} value={p.id}>
-                  {p.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Warehouse"
-              value={form.warehouse}
-              onChange={(e) => setForm({ ...form, warehouse: e.target.value })}
-              fullWidth
-              required
-              disabled={!!selectedItem}
-            >
-              {warehouses.map((w) => (
-                <MenuItem key={w.id} value={w.id}>
-                  {w.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <Stack direction="row" spacing={2}>
-              <TextField
-                label="Quantity"
-                type="number"
-                value={form.quantity}
-                onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-                fullWidth
-                required
-              />
-              <TextField
-                label="Reorder Level"
-                type="number"
-                value={form.reorder_level}
-                onChange={(e) => setForm({ ...form, reorder_level: e.target.value })}
-                fullWidth
-              />
-            </Stack>
-            <TextField
-              label="Location (Rack/Shelf)"
-              value={form.location}
-              onChange={(e) => setForm({ ...form, location: e.target.value })}
-              fullWidth
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setFormOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave}>
-            {selectedItem ? 'Update' : 'Add'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Adjust Dialog */}
-      <Dialog open={adjustOpen} onClose={() => setAdjustOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Adjust Inventory Quantity</DialogTitle>
+      <Dialog open={logsOpen} onClose={() => setLogsOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle>Inventory Logs - {selectedItem?.product_name}</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, mt: 1 }}>
-            Current quantity: {selectedItem?.quantity || 0}
-          </Typography>
-          <Stack spacing={2}>
-            <TextField
-              label="Adjustment (+ or -)"
-              type="number"
-              value={adjustForm.quantity}
-              onChange={(e) => setAdjustForm({ ...adjustForm, quantity: e.target.value })}
-              fullWidth
-              required
-              helperText="Use positive number to add, negative to subtract"
-            />
-            <TextField
-              label="Notes"
-              multiline
-              rows={2}
-              value={adjustForm.notes}
-              onChange={(e) => setAdjustForm({ ...adjustForm, notes: e.target.value })}
-              fullWidth
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAdjustOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleAdjust}>
-            Adjust
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Transfer Dialog */}
-      <Dialog open={transferOpen} onClose={() => setTransferOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Transfer Inventory</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, mt: 1 }}>
-            From: {selectedItem?.warehouse?.name || selectedItem?.warehouse_name}
-            <br />
-            Available: {selectedItem?.available_quantity ?? (selectedItem?.quantity - (selectedItem?.reserved_quantity || 0))}
-          </Typography>
-          <Stack spacing={2}>
-            <TextField
-              select
-              label="To Warehouse"
-              value={transferForm.to_warehouse}
-              onChange={(e) => setTransferForm({ ...transferForm, to_warehouse: e.target.value })}
-              fullWidth
-              required
-            >
-              {warehouses
-                .filter((w) => w.id !== (selectedItem?.warehouse?.id || selectedItem?.warehouse_id))
-                .map((w) => (
-                  <MenuItem key={w.id} value={w.id}>
-                    {w.name}
-                  </MenuItem>
-                ))}
-            </TextField>
-            <TextField
-              label="Quantity to Transfer"
-              type="number"
-              value={transferForm.quantity}
-              onChange={(e) => setTransferForm({ ...transferForm, quantity: e.target.value })}
-              fullWidth
-              required
-            />
-            <TextField
-              label="Notes"
-              multiline
-              rows={2}
-              value={transferForm.notes}
-              onChange={(e) => setTransferForm({ ...transferForm, notes: e.target.value })}
-              fullWidth
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setTransferOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleTransfer}>
-            Transfer
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Detail Drawer */}
-      <DetailDrawer
-        open={detailOpen}
-        onClose={() => setDetailOpen(false)}
-        title={selectedItem?.product?.name || selectedItem?.product_name}
-        subtitle={`Inventory ID: ${selectedItem?.id}`}
-        width={550}
-      >
-        <Tabs value={0} sx={{ mb: 2 }}>
-          <Tab icon={<Inventory />} label="Details" iconPosition="start" />
-          <Tab icon={<History />} label="History" iconPosition="start" />
-        </Tabs>
-        {selectedItem && (
-          <>
-            <DetailSection title="Stock Information">
-              <DetailItem label="Product" value={selectedItem.product?.name || selectedItem.product_name} />
-              <DetailItem label="Warehouse" value={selectedItem.warehouse?.name || selectedItem.warehouse_name} />
-              <DetailItem label="Quantity" value={selectedItem.quantity} />
-              <DetailItem label="Reserved" value={selectedItem.reserved_quantity || 0} />
-              <DetailItem
-                label="Available"
-                value={selectedItem.available_quantity ?? (selectedItem.quantity - (selectedItem.reserved_quantity || 0))}
-              />
-              <DetailItem label="Reorder Level" value={selectedItem.reorder_level || 10} />
-              <DetailItem label="Location" value={selectedItem.location} />
-            </DetailSection>
-            <DetailSection title="Stock Status">
-              <Box>
-                <Chip
-                  label={getStockStatus(selectedItem).label}
-                  color={getStockStatus(selectedItem).color as any}
-                  sx={{ mb: 2 }}
-                />
+          <List>
+            {logs.length > 0 ? logs.map((log: any, index: number) => (
+              <Box key={index}>
+                <ListItem>
+                  <ListItemText
+                    primary={`${log.movement_type} - Qty: ${log.quantity}`}
+                    secondary={`${new Date(log.created_at).toLocaleString()} - ${log.notes || ''}`}
+                  />
+                </ListItem>
+                <Divider />
               </Box>
-            </DetailSection>
-            {inventoryLogs.length > 0 && (
-              <DetailSection title="Recent Activity">
-                {inventoryLogs.slice(0, 5).map((log: any) => (
-                  <Paper key={log.id} sx={{ p: 2, mb: 1, bgcolor: '#f8fafc' }}>
-                    <Typography variant="body2" fontWeight={600}>
-                      {log.action}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {log.notes} - {new Date(log.created_at).toLocaleString()}
-                    </Typography>
-                  </Paper>
-                ))}
-              </DetailSection>
-            )}
-          </>
-        )}
-      </DetailDrawer>
+            )) : <Typography p={2}>No logs found.</Typography>}
+          </List>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

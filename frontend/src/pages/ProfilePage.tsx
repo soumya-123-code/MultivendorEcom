@@ -15,7 +15,9 @@ export default function ProfilePage() {
 
   const loadProfile = async () => {
     try {
-      const data = await userAPI.getMe();
+      let data = await userAPI.getMe();
+      if (data.data) data = data.data;
+      
       setFormData({
         first_name: data.first_name || '',
         last_name: data.last_name || '',

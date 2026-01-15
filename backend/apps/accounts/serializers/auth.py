@@ -5,6 +5,16 @@ from rest_framework import serializers
 from django.core.validators import EmailValidator
 
 
+from apps.accounts.models.otp import OTPRequest
+
+
+class OTPRequestModelSerializer(serializers.ModelSerializer):
+    """Serializer for OTP request model (Admin view)."""
+    class Meta:
+        model = OTPRequest
+        fields = ['id', 'email', 'otp_hash', 'expires_at', 'is_used', 'attempts', 'ip_address', 'user_agent', 'created_at']
+
+
 class RequestOTPSerializer(serializers.Serializer):
     """Serializer for requesting OTP."""
     email = serializers.EmailField(

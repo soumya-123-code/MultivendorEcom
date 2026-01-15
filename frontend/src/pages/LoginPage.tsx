@@ -59,7 +59,8 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const data = await authAPI.verifyOTP(email, otp);
+      let data = await authAPI.verifyOTP(email, otp);
+      if (data.data) data = data.data;
 
       if (!data.access || !data.refresh) {
         throw new Error('Invalid response format from server');

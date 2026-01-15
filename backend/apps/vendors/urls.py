@@ -3,19 +3,14 @@ Vendor URL patterns.
 """
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from apps.vendors.views import VendorViewSet, CurrentVendorView, SupplierViewSet
-from apps.vendors.views.settlement_views import (
-    VendorSettlementViewSet,
-    VendorPayoutViewSet,
-    VendorLedgerViewSet,
-    CommissionRecordViewSet,
-)
+from apps.vendors.views import VendorViewSet, CurrentVendorView, SupplierViewSet, VendorStaffViewSet
 
 router = DefaultRouter()
-router.register('', VendorViewSet, basename='vendors')
+router.register('suppliers', SupplierViewSet, basename='suppliers')
+router.register('staff', VendorStaffViewSet, basename='vendor-staff')
 
-supplier_router = DefaultRouter()
-supplier_router.register('suppliers', SupplierViewSet, basename='suppliers')
+vendor_router = DefaultRouter()
+vendor_router.register('', VendorViewSet, basename='vendors')
 
 settlement_router = DefaultRouter()
 settlement_router.register('settlements', VendorSettlementViewSet, basename='settlements')
@@ -32,9 +27,5 @@ commission_router.register('commissions', CommissionRecordViewSet, basename='com
 urlpatterns = [
     path('me/', CurrentVendorView.as_view(), name='current-vendor'),
     path('', include(router.urls)),
-    path('', include(supplier_router.urls)),
-    path('', include(settlement_router.urls)),
-    path('', include(payout_router.urls)),
-    path('', include(ledger_router.urls)),
-    path('', include(commission_router.urls)),
+    path('', include(vendor_router.urls)),
 ]

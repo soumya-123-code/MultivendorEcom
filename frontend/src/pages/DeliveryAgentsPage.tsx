@@ -74,9 +74,9 @@ export default function DeliveryAgentsPage() {
     try {
       setLoading(true);
       const data = await deliveryAgentAPI.getAll();
-      setAgents(data.results || data.data || data || []);
-    } catch (err: any) {
-      setError(err.message);
+      setAgents(data.data || data.results || data);
+    } catch (error: any) {
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -194,148 +194,63 @@ export default function DeliveryAgentsPage() {
     }
   };
 
-  const getVehicleIcon = (type: string) => {
-    const vehicle = VEHICLE_TYPES.find(v => v.value === type);
-    return vehicle?.icon || <TwoWheeler />;
+  const handleReject = async (id: number) => {
+    if (window.confirm('Are you sure you want to reject this agent?')) {
+      try {
+        await deliveryAgentAPI.reject(id);
+        loadData();
+      } catch (error: any) {
+        setError(error.message);
+      }
+    }
+  };
+
+  const handleSuspend = async (id: number) => {
+    if (window.confirm('Are you sure you want to suspend this agent?')) {
+      try {
+        await deliveryAgentAPI.suspend(id);
+        loadData();
+      } catch (error: any) {
+        setError(error.message);
+      }
+    }
+  };
+
+  const handleActivate = async (id: number) => {
+    try {
+      await deliveryAgentAPI.activate(id);
+      loadData();
+    } catch (error: any) {
+      setError(error.message);
+    }
   };
 
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 70 },
-    {
-      field: 'name',
-      headerName: 'Agent',
-      flex: 1,
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Avatar sx={{ width: 36, height: 36, bgcolor: '#06b6d4' }}>
-            {params.row.user?.first_name?.[0] || params.row.user_name?.[0] || 'A'}
-          </Avatar>
-          <Box>
-            <Typography fontWeight={600} fontSize={14}>
-              {params.row.user?.first_name || ''} {params.row.user?.last_name || params.row.user_name || ''}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {params.row.user?.email || ''}
-            </Typography>
-          </Box>
-        </Box>
-      ),
-    },
-    {
-      field: 'phone',
-      headerName: 'Phone',
-      width: 130,
-      valueGetter: (value, row) => row.phone || row.phone_number || '-',
-    },
-    {
-      field: 'vehicle_type',
-      headerName: 'Vehicle',
-      width: 120,
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {getVehicleIcon(params.value)}
-          <Typography variant="body2" textTransform="capitalize">
-            {params.value || '-'}
-          </Typography>
-        </Box>
-      ),
-    },
-    {
-      field: 'status',
-      headerName: 'Status',
-      width: 120,
-      renderCell: (params) => (
-        <Chip
-          label={params.value || 'pending'}
-          color={getStatusColor(params.value) as any}
-          size="small"
-        />
-      ),
-    },
-    {
-      field: 'is_available',
-      headerName: 'Available',
-      width: 100,
-      renderCell: (params) => (
-        <Chip
-          label={params.value ? 'Yes' : 'No'}
-          color={params.value ? 'success' : 'default'}
-          size="small"
-          variant="outlined"
-        />
-      ),
-    },
-    {
-      field: 'total_deliveries',
-      headerName: 'Deliveries',
-      width: 100,
-      renderCell: (params) => params.value || 0,
-    },
+    { field: 'user_name', headerName: 'Name', width: 200 },
+    { field: 'phone_number', headerName: 'Phone', width: 150 },
+    { field: 'vehicle_type', headerName: 'Vehicle', width: 130 },
+    { field: 'status', headerName: 'Status', width: 120, renderCell: (params) => <Chip label={params.value} size="small" color={params.value === 'active' ? 'success' : params.value === 'suspended' ? 'warning' : 'default'} /> },
+    { field: 'is_available', headerName: 'Available', width: 100, type: 'boolean' },
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 200,
-      sortable: false,
+      width: 250,
       renderCell: (params) => (
-        <Stack direction="row" spacing={0.5}>
-          <Tooltip title="View Details">
-            <IconButton size="small" onClick={() => openDetail(params.row)}>
-              <Visibility fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Edit">
-            <IconButton size="small" onClick={() => openForm(params.row)}>
-              <Edit fontSize="small" />
-            </IconButton>
-          </Tooltip>
+        <>
           {params.row.status === 'pending' && (
             <>
-              <Tooltip title="Approve">
-                <IconButton
-                  size="small"
-                  color="success"
-                  onClick={() => handleApprove(params.row.id)}
-                >
-                  <CheckCircle fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Reject">
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={() => {
-                    setSelectedAgent(params.row);
-                    setRejectOpen(true);
-                  }}
-                >
-                  <Cancel fontSize="small" />
-                </IconButton>
-              </Tooltip>
+              <IconButton size="small" onClick={() => handleApprove(params.row.id)} title="Approve"><ApproveIcon color="success" /></IconButton>
+              <IconButton size="small" onClick={() => handleReject(params.row.id)} title="Reject"><RejectIcon color="error" /></IconButton>
             </>
           )}
           {params.row.status === 'active' && (
-            <Tooltip title="Suspend">
-              <IconButton
-                size="small"
-                color="warning"
-                onClick={() => handleSuspend(params.row.id)}
-              >
-                <Block fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <IconButton size="small" onClick={() => handleSuspend(params.row.id)} title="Suspend"><RejectIcon color="warning" /></IconButton>
           )}
           {params.row.status === 'suspended' && (
-            <Tooltip title="Activate">
-              <IconButton
-                size="small"
-                color="success"
-                onClick={() => handleActivate(params.row.id)}
-              >
-                <PlayArrow fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <IconButton size="small" onClick={() => handleActivate(params.row.id)} title="Activate"><ApproveIcon color="success" /></IconButton>
           )}
-        </Stack>
+        </>
       ),
     },
   ];

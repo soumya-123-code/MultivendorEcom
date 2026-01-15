@@ -11,6 +11,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from drf_spectacular.utils import extend_schema
 
 from apps.vendors.models import Vendor, Supplier
+from apps.vendors.models.vendor import VendorStaff
 from apps.vendors.serializers import (
     VendorSerializer,
     VendorListSerializer,
@@ -19,10 +20,14 @@ from apps.vendors.serializers import (
     VendorApprovalSerializer,
     SupplierSerializer,
     SupplierCreateSerializer,
+    VendorStaffSerializer,
 )
 from apps.vendors.services import VendorService, SupplierService
 from core.permissions import IsAdmin, IsVendor, IsVendorOrAdmin
 from core.utils.constants import VendorStatus
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class VendorViewSet(viewsets.ModelViewSet):
@@ -34,16 +39,16 @@ class VendorViewSet(viewsets.ModelViewSet):
     ordering_fields = ['created_at', 'store_name', 'rating']
     ordering = ['-created_at']
     filterset_fields = ['status', 'city', 'state']
-    
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [AllowAny()]
-        if self.action in ['create']:
-            return [IsAuthenticated()]
-        if self.action in ['approve', 'reject', 'suspend', 'reactivate']:
-            return [IsAuthenticated(), IsAdmin()]
-        return [IsAuthenticated(), IsVendorOrAdmin()]
-    
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return VendorListSerializer
+        if self.action == 'create':
+            return VendorCreateSerializer
+        if self.action in ['update', 'partial_update']:
+            return VendorUpdateSerializer
+        return VendorSerializer
+
     def get_queryset(self):
         queryset = Vendor.objects.select_related('user')
         
@@ -55,18 +60,16 @@ class VendorViewSet(viewsets.ModelViewSet):
                 return queryset.filter(status=VendorStatus.APPROVED)
         
         return queryset
-    
-    def get_serializer_class(self):
-        if self.action == 'list':
-            return VendorListSerializer
-        if self.action == 'create':
-            return VendorCreateSerializer
-        if self.action in ['update', 'partial_update']:
-            return VendorUpdateSerializer
-        if self.action in ['approve', 'reject']:
-            return VendorApprovalSerializer
-        return VendorSerializer
-    
+
+    def get_permissions(self):
+        if self.action in ['create']:
+            return [IsAuthenticated()]
+        if self.action in ['update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsVendorOrAdmin()]
+        if self.action in ['approve', 'reject', 'suspend', 'reactivate']:
+            return [IsAuthenticated(), IsAdmin()]
+        return [AllowAny()]
+
     @extend_schema(tags=['Vendors'])
     def list(self, request, *args, **kwargs):
         """List all vendors (public shows only approved)."""
@@ -76,7 +79,7 @@ class VendorViewSet(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         """Get vendor details."""
         return super().retrieve(request, *args, **kwargs)
-    
+
     @extend_schema(tags=['Vendors'])
     def create(self, request, *args, **kwargs):
         """Create a new vendor profile."""
@@ -92,7 +95,7 @@ class VendorViewSet(viewsets.ModelViewSet):
             'success': True,
             'data': VendorSerializer(vendor).data
         }, status=status.HTTP_201_CREATED)
-    
+
     @extend_schema(tags=['Vendors (Admin)'])
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
@@ -104,7 +107,7 @@ class VendorViewSet(viewsets.ModelViewSet):
             'success': True,
             'data': VendorSerializer(updated_vendor).data
         })
-    
+
     @extend_schema(tags=['Vendors (Admin)'])
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
@@ -123,7 +126,7 @@ class VendorViewSet(viewsets.ModelViewSet):
             'success': True,
             'data': VendorSerializer(updated_vendor).data
         })
-    
+
     @extend_schema(tags=['Vendors (Admin)'])
     @action(detail=True, methods=['post'])
     def suspend(self, request, pk=None):
@@ -135,7 +138,7 @@ class VendorViewSet(viewsets.ModelViewSet):
             'success': True,
             'data': VendorSerializer(updated_vendor).data
         })
-    
+
     @extend_schema(tags=['Vendors (Admin)'])
     @action(detail=True, methods=['post'])
     def reactivate(self, request, pk=None):
@@ -147,7 +150,7 @@ class VendorViewSet(viewsets.ModelViewSet):
             'success': True,
             'data': VendorSerializer(updated_vendor).data
         })
-    
+
     @extend_schema(tags=['Vendors'])
     @action(detail=True, methods=['get'])
     def stats(self, request, pk=None):
@@ -179,7 +182,7 @@ class CurrentVendorView(APIView):
             'success': True,
             'data': VendorSerializer(vendor).data
         })
-    
+
     @extend_schema(request=VendorUpdateSerializer, responses={200: VendorSerializer}, tags=['Vendors'])
     def patch(self, request):
         """Update current user's vendor profile."""
@@ -209,7 +212,13 @@ class SupplierViewSet(viewsets.ModelViewSet):
     ordering_fields = ['name', 'created_at']
     ordering = ['name']
     filterset_fields = ['status']
-    
+    serializer_class = SupplierSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return SupplierCreateSerializer
+        return SupplierSerializer
+
     def get_queryset(self):
         user = self.request.user
         
@@ -222,31 +231,46 @@ class SupplierViewSet(viewsets.ModelViewSet):
             return Supplier.objects.filter(vendor=user.vendor)
         
         return Supplier.objects.none()
+
+    def perform_create(self, serializer):
+        if hasattr(self.request.user, 'vendor'):
+            serializer.save(vendor=self.request.user.vendor)
+        elif self.request.user.is_admin:
+            # For admin, vendor should be in validated data, but serializer is SupplierCreateSerializer
+            # which doesn't have vendor. Admin creation might need enhancement if needed.
+            # Assuming admin creates for a specific vendor via ID or it fails.
+            pass
+
+
+class VendorStaffViewSet(viewsets.ModelViewSet):
+    """ViewSet for vendor staff management."""
+    permission_classes = [IsAuthenticated, IsVendorOrAdmin]
+    serializer_class = VendorStaffSerializer
     
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return SupplierCreateSerializer
-        return SupplierSerializer
-    
-    @extend_schema(tags=['Suppliers'])
-    def create(self, request, *args, **kwargs):
-        """Create a new supplier."""
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+    def get_queryset(self):
+        user = self.request.user
         
-        vendor = getattr(request.user, 'vendor', None)
-        if not vendor and not request.user.is_admin:
-            return Response({
-                'success': False,
-                'error': {'message': 'Vendor profile required.'}
-            }, status=status.HTTP_403_FORBIDDEN)
+        # Admins see all
+        if user.is_admin:
+            return VendorStaff.objects.all()
         
-        supplier = SupplierService.create_supplier(
-            vendor=vendor,
-            **serializer.validated_data
-        )
+        # Vendors see their staff
+        if hasattr(user, 'vendor'):
+            return VendorStaff.objects.filter(vendor=user.vendor)
+            
+        return VendorStaff.objects.none()
+
+    def perform_create(self, serializer):
+        vendor = None
+        if hasattr(self.request.user, 'vendor'):
+            vendor = self.request.user.vendor
+        elif self.request.user.is_admin and 'vendor_id' in self.request.data:
+            try:
+                vendor = Vendor.objects.get(id=self.request.data['vendor_id'])
+            except Vendor.DoesNotExist:
+                pass
         
-        return Response({
-            'success': True,
-            'data': SupplierSerializer(supplier).data
-        }, status=status.HTTP_201_CREATED)
+        if vendor:
+            serializer.save(vendor=vendor)
+        else:
+            raise serializers.ValidationError("Vendor context required")

@@ -9,7 +9,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from drf_spectacular.utils import extend_schema
 
-from apps.products.models import Product, Category, ProductReview
+from apps.products.models import Product, Category, ProductReview, ProductVariant
 from apps.products.serializers import (
     ProductSerializer,
     ProductListSerializer,
@@ -22,6 +22,7 @@ from apps.products.serializers import (
     ReviewSerializer,
     ReviewCreateSerializer,
     ReviewListSerializer,
+    ProductVariantSerializer,
 )
 from apps.products.services import ProductService, CategoryService
 from core.permissions import IsVendorOrAdmin, IsVendor
@@ -185,33 +186,54 @@ class ReviewViewSet(viewsets.ModelViewSet):
     ordering_fields = ['created_at', 'rating', 'helpful_count']
     ordering = ['-created_at']
     filterset_fields = ['product', 'rating', 'is_approved']
-    
+
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [AllowAny()]
         return [IsAuthenticated()]
-    
+
     def get_queryset(self):
         queryset = ProductReview.objects.select_related('product', 'customer')
+        user = self.request.user
         
-        # Public views show only approved reviews
+        if user.is_authenticated and user.role in ['super_admin', 'admin']:
+            return queryset
+        if user.is_authenticated and hasattr(user, 'vendor'):
+            return queryset.filter(product__vendor=user.vendor)
         if self.action in ['list', 'retrieve']:
             return queryset.filter(is_approved=True)
-        
-        # Users see their own reviews
-        if self.request.user.is_authenticated:
-            if hasattr(self.request.user, 'customer'):
-                return queryset.filter(customer=self.request.user.customer)
-        
+        if user.is_authenticated and hasattr(user, 'customer'):
+            return queryset.filter(customer=user.customer)
         return queryset.none()
-    
+
     def get_serializer_class(self):
         if self.action == 'list':
             return ReviewListSerializer
         if self.action == 'create':
             return ReviewCreateSerializer
         return ReviewSerializer
-    
+
+    @extend_schema(tags=['Reviews'])
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Approve a review (Admin/Vendor only)."""
+        review = self.get_object()
+        
+        if not request.user.is_authenticated:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        if request.user.role not in ['super_admin', 'admin', 'vendor']:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        if request.user.role == 'vendor':
+            if review.product.vendor != request.user.vendor:
+                return Response(status=status.HTTP_403_FORBIDDEN)
+        
+        review.approve(request.user)
+        
+        return Response({
+            'success': True,
+            'data': ReviewSerializer(review).data
+        })
+
     @extend_schema(tags=['Reviews'])
     def create(self, request, *args, **kwargs):
         """Create a new review."""
@@ -231,7 +253,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
             'success': True,
             'data': ReviewSerializer(review).data
         }, status=status.HTTP_201_CREATED)
-    
+
     @extend_schema(tags=['Reviews'])
     @action(detail=True, methods=['post'])
     def helpful(self, request, pk=None):
@@ -243,3 +265,27 @@ class ReviewViewSet(viewsets.ModelViewSet):
             'success': True,
             'data': {'helpful_count': review.helpful_count}
         })
+
+
+class ProductVariantViewSet(viewsets.ModelViewSet):
+    """ViewSet for product variant management."""
+    serializer_class = ProductVariantSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    search_fields = ['name', 'sku', 'product__name']
+    ordering_fields = ['created_at', 'price']
+    ordering = ['-created_at']
+    filterset_fields = ['product']
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = ProductVariant.objects.select_related('product')
+        
+        # Admins see all
+        if user.role in ['super_admin', 'admin']:
+            return queryset
+        
+        # Vendors see only their product variants
+        if hasattr(user, 'vendor'):
+            return queryset.filter(product__vendor=user.vendor)
+            
+        return queryset.none()

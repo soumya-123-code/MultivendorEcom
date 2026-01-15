@@ -3,15 +3,14 @@ Product URL patterns.
 """
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from apps.products.views import ProductViewSet, ReviewViewSet
-from apps.products.views.brand_views import BrandViewSet
-from apps.products.views.attribute_views import CategoryAttributeViewSet, ProductAttributeValueViewSet
+from apps.products.views import ProductViewSet, ReviewViewSet, ProductVariantViewSet
 
 router = DefaultRouter()
-router.register('', ProductViewSet, basename='products')
+router.register('reviews', ReviewViewSet, basename='reviews')
+router.register('variants', ProductVariantViewSet, basename='variants')
 
-review_router = DefaultRouter()
-review_router.register('reviews', ReviewViewSet, basename='reviews')
+product_router = DefaultRouter()
+product_router.register('', ProductViewSet, basename='products')
 
 brand_router = DefaultRouter()
 brand_router.register('brands', BrandViewSet, basename='brands')
@@ -24,8 +23,5 @@ product_attribute_router.register('attribute-values', ProductAttributeValueViewS
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('', include(review_router.urls)),
-    path('', include(brand_router.urls)),
-    path('', include(attribute_router.urls)),
-    path('', include(product_attribute_router.urls)),
+    path('', include(product_router.urls)),
 ]

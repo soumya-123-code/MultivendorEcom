@@ -106,9 +106,11 @@ class DeliveryStatusLogSerializer(serializers.ModelSerializer):
 
 class DeliveryProofSerializer(serializers.ModelSerializer):
     """Serializer for delivery proofs."""
+    sales_order_number = serializers.CharField(source='assignment.sales_order.order_number', read_only=True)
+    
     class Meta:
         model = DeliveryProof
-        fields = ['id', 'proof_type', 'proof_data', 'captured_at', 'location', 'created_at']
+        fields = ['id', 'assignment', 'sales_order_number', 'proof_type', 'proof_data', 'captured_at', 'location', 'created_at']
 
 
 class DeliveryAssignmentListSerializer(serializers.ModelSerializer):
