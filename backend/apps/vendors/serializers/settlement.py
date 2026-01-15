@@ -52,6 +52,45 @@ class VendorSettlementListSerializer(serializers.ModelSerializer):
         ]
 
 
+class VendorSettlementDetailSerializer(serializers.ModelSerializer):
+    """Detailed settlement serializer with related data."""
+    vendor_name = serializers.CharField(source='vendor.store_name', read_only=True)
+    vendor_email = serializers.CharField(source='vendor.user.email', read_only=True)
+    payouts = serializers.SerializerMethodField()
+
+    class Meta:
+        model = VendorSettlement
+        fields = [
+            'id', 'vendor', 'vendor_name', 'vendor_email', 'settlement_number',
+            'period_start', 'period_end', 'frequency',
+            'orders_count', 'items_count',
+            'gross_amount', 'commission_amount', 'commission_rate',
+            'refunds_amount', 'chargebacks_amount', 'fees_amount',
+            'adjustments_amount', 'tax_on_commission', 'tds_amount',
+            'net_payable', 'net_paid', 'status',
+            'finalized_at', 'approved_at', 'paid_at',
+            'notes', 'payouts', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'settlement_number', 'created_at', 'updated_at']
+
+    def get_payouts(self, obj):
+        payouts = obj.payouts.all()
+        return VendorPayoutListSerializer(payouts, many=True).data
+
+
+class VendorPayoutListSerializer(serializers.ModelSerializer):
+    """Minimal payout serializer for lists."""
+    vendor_name = serializers.CharField(source='vendor.store_name', read_only=True)
+
+    class Meta:
+        model = VendorPayout
+        fields = [
+            'id', 'vendor', 'vendor_name', 'payout_number',
+            'amount', 'payment_method', 'status',
+            'transaction_date', 'created_at',
+        ]
+
+
 class VendorPayoutSerializer(serializers.ModelSerializer):
     """Full payout serializer."""
     vendor_name = serializers.CharField(source='vendor.store_name', read_only=True)
