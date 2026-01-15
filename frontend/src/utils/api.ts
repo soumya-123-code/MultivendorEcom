@@ -1177,3 +1177,302 @@ export const tokenAPI = {
       body: JSON.stringify({ user_id: userId }),
     }),
 };
+
+// Vendor Order APIs (Multi-vendor order splits)
+export const vendorOrderAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/sales-orders/vendor-orders/${query}`);
+  },
+
+  getOne: (id: number) => api(`/sales-orders/vendor-orders/${id}/`),
+
+  confirm: (id: number) =>
+    api(`/sales-orders/vendor-orders/${id}/confirm/`, {
+      method: 'POST',
+    }),
+
+  process: (id: number) =>
+    api(`/sales-orders/vendor-orders/${id}/process/`, {
+      method: 'POST',
+    }),
+
+  pack: (id: number) =>
+    api(`/sales-orders/vendor-orders/${id}/pack/`, {
+      method: 'POST',
+    }),
+
+  ship: (id: number) =>
+    api(`/sales-orders/vendor-orders/${id}/ship/`, {
+      method: 'POST',
+    }),
+
+  deliver: (id: number) =>
+    api(`/sales-orders/vendor-orders/${id}/deliver/`, {
+      method: 'POST',
+    }),
+
+  getStats: () => api('/sales-orders/vendor-orders/stats/'),
+};
+
+// Return Request APIs
+export const returnRequestAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/sales-orders/returns/${query}`);
+  },
+
+  getOne: (id: number) => api(`/sales-orders/returns/${id}/`),
+
+  create: (data: any) =>
+    api('/sales-orders/returns/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  approve: (id: number) =>
+    api(`/sales-orders/returns/${id}/approve/`, {
+      method: 'POST',
+    }),
+
+  reject: (id: number, reason: string) =>
+    api(`/sales-orders/returns/${id}/reject/`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
+  schedulePickup: (id: number, data: { pickup_date: string; agent_id?: number }) =>
+    api(`/sales-orders/returns/${id}/schedule_pickup/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  completePickup: (id: number) =>
+    api(`/sales-orders/returns/${id}/complete_pickup/`, {
+      method: 'POST',
+    }),
+
+  receive: (id: number) =>
+    api(`/sales-orders/returns/${id}/receive/`, {
+      method: 'POST',
+    }),
+
+  inspect: (id: number, data: { result: string; notes?: string }) =>
+    api(`/sales-orders/returns/${id}/inspect/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  initiateRefund: (id: number, data?: { refund_method?: string }) =>
+    api(`/sales-orders/returns/${id}/initiate_refund/`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
+
+  getStats: () => api('/sales-orders/returns/stats/'),
+};
+
+// Coupon APIs
+export const couponAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/sales-orders/coupons/${query}`);
+  },
+
+  getOne: (id: number) => api(`/sales-orders/coupons/${id}/`),
+
+  create: (data: any) =>
+    api('/sales-orders/coupons/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: any) =>
+    api(`/sales-orders/coupons/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    api(`/sales-orders/coupons/${id}/`, {
+      method: 'DELETE',
+    }),
+
+  validate: (code: string, cartTotal: number) =>
+    api('/sales-orders/coupons/validate/', {
+      method: 'POST',
+      body: JSON.stringify({ code, cart_total: cartTotal }),
+    }),
+
+  activate: (id: number) =>
+    api(`/sales-orders/coupons/${id}/activate/`, {
+      method: 'POST',
+    }),
+
+  deactivate: (id: number) =>
+    api(`/sales-orders/coupons/${id}/deactivate/`, {
+      method: 'POST',
+    }),
+
+  getUsage: (id: number) => api(`/sales-orders/coupons/${id}/usage/`),
+
+  getStats: () => api('/sales-orders/coupons/stats/'),
+};
+
+// Vendor Settlement APIs
+export const vendorSettlementAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/vendors/settlements/${query}`);
+  },
+
+  getOne: (id: number) => api(`/vendors/settlements/${id}/`),
+
+  generate: (data: { vendor_id: number; period_start: string; period_end: string }) =>
+    api('/vendors/settlements/generate/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  approve: (id: number) =>
+    api(`/vendors/settlements/${id}/approve/`, {
+      method: 'POST',
+    }),
+
+  processPayment: (id: number, data: { payment_method?: string; transaction_id?: string }) =>
+    api(`/vendors/settlements/${id}/process_payment/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getStats: () => api('/vendors/settlements/stats/'),
+};
+
+// Vendor Payout APIs
+export const vendorPayoutAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/vendors/payouts/${query}`);
+  },
+
+  getOne: (id: number) => api(`/vendors/payouts/${id}/`),
+};
+
+// Vendor Ledger APIs
+export const vendorLedgerAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/vendors/ledger/${query}`);
+  },
+};
+
+// Commission Record APIs
+export const commissionAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/vendors/commissions/${query}`);
+  },
+};
+
+// Brand APIs
+export const brandAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/products/brands/${query}`);
+  },
+
+  getOne: (id: number) => api(`/products/brands/${id}/`),
+
+  create: (data: any) =>
+    api('/products/brands/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: any) =>
+    api(`/products/brands/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    api(`/products/brands/${id}/`, {
+      method: 'DELETE',
+    }),
+
+  verify: (id: number) =>
+    api(`/products/brands/${id}/verify/`, {
+      method: 'POST',
+    }),
+
+  feature: (id: number) =>
+    api(`/products/brands/${id}/feature/`, {
+      method: 'POST',
+    }),
+
+  getProducts: (id: number) => api(`/products/brands/${id}/products/`),
+};
+
+// Category Attribute APIs
+export const categoryAttributeAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/products/attributes/${query}`);
+  },
+
+  getOne: (id: number) => api(`/products/attributes/${id}/`),
+
+  create: (data: any) =>
+    api('/products/attributes/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: any) =>
+    api(`/products/attributes/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    api(`/products/attributes/${id}/`, {
+      method: 'DELETE',
+    }),
+
+  getByCategory: (categoryId: number) =>
+    api(`/products/attributes/by_category/?category_id=${categoryId}`),
+
+  getFilters: (categoryId: number) =>
+    api(`/products/attributes/filters/?category_id=${categoryId}`),
+};
+
+// Product Attribute Value APIs
+export const productAttributeValueAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/products/attribute-values/${query}`);
+  },
+
+  create: (data: any) =>
+    api('/products/attribute-values/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: any) =>
+    api(`/products/attribute-values/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    api(`/products/attribute-values/${id}/`, {
+      method: 'DELETE',
+    }),
+
+  bulkCreate: (productId: number, values: any[]) =>
+    api('/products/attribute-values/bulk_create/', {
+      method: 'POST',
+      body: JSON.stringify({ product_id: productId, values }),
+    }),
+};
