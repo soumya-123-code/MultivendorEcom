@@ -732,6 +732,23 @@ export const userAPI = {
 
   getOne: (id: number) => api(`/users/${id}/`),
 
+  create: (data: any) =>
+    api('/users/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: any) =>
+    api(`/users/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    api(`/users/${id}/`, {
+      method: 'DELETE',
+    }),
+
   getMe: () => api('/users/me/'),
 
   updateMe: (data: any) =>
@@ -740,9 +757,423 @@ export const userAPI = {
       body: JSON.stringify(data),
     }),
 
+  getProfile: () => api('/users/me/profile/'),
+
+  updateProfile: (data: any) =>
+    api('/users/me/profile/', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
   changePassword: (oldPassword: string, newPassword: string) =>
     api('/users/me/change-password/', {
       method: 'POST',
       body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+    }),
+
+  activate: (id: number) =>
+    api(`/users/${id}/activate/`, {
+      method: 'POST',
+    }),
+
+  deactivate: (id: number) =>
+    api(`/users/${id}/deactivate/`, {
+      method: 'POST',
+    }),
+};
+
+// Activity Log APIs
+export const activityLogAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/activity-logs/${query}`);
+  },
+
+  getOne: (id: number) => api(`/activity-logs/${id}/`),
+
+  getByUser: (userId: number) => api(`/activity-logs/?user=${userId}`),
+};
+
+// OTP Request APIs
+export const otpRequestAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/otp-requests/${query}`);
+  },
+
+  getOne: (id: number) => api(`/otp-requests/${id}/`),
+};
+
+// Customer Address APIs
+export const customerAddressAPI = {
+  getAll: (customerId: number) => api(`/customers/${customerId}/addresses/`),
+
+  create: (customerId: number, data: any) =>
+    api(`/customers/${customerId}/addresses/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (customerId: number, addressId: number, data: any) =>
+    api(`/customers/${customerId}/addresses/${addressId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (customerId: number, addressId: number) =>
+    api(`/customers/${customerId}/addresses/${addressId}/`, {
+      method: 'DELETE',
+    }),
+
+  setDefault: (customerId: number, addressId: number) =>
+    api(`/customers/${customerId}/addresses/${addressId}/set-default/`, {
+      method: 'POST',
+    }),
+};
+
+// Wishlist APIs
+export const wishlistAPI = {
+  getAll: (customerId: number) => api(`/customers/${customerId}/wishlist/`),
+
+  add: (customerId: number, productId: number) =>
+    api(`/customers/${customerId}/wishlist/`, {
+      method: 'POST',
+      body: JSON.stringify({ product_id: productId }),
+    }),
+
+  remove: (customerId: number, itemId: number) =>
+    api(`/customers/${customerId}/wishlist/${itemId}/`, {
+      method: 'DELETE',
+    }),
+
+  getMyWishlist: () => api('/customers/me/wishlist/'),
+
+  addToMyWishlist: (productId: number) =>
+    api('/customers/me/wishlist/', {
+      method: 'POST',
+      body: JSON.stringify({ product_id: productId }),
+    }),
+};
+
+// Cart APIs
+export const cartAPI = {
+  get: () => api('/cart/'),
+
+  addItem: (productId: number, quantity: number, variantId?: number) =>
+    api('/cart/items/', {
+      method: 'POST',
+      body: JSON.stringify({ product_id: productId, quantity, variant_id: variantId }),
+    }),
+
+  updateItem: (itemId: number, quantity: number) =>
+    api(`/cart/items/${itemId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ quantity }),
+    }),
+
+  removeItem: (itemId: number) =>
+    api(`/cart/items/${itemId}/`, {
+      method: 'DELETE',
+    }),
+
+  clear: () =>
+    api('/cart/clear/', {
+      method: 'POST',
+    }),
+};
+
+// Product Variant APIs
+export const productVariantAPI = {
+  getAll: (productId: number) => api(`/products/${productId}/variants/`),
+
+  create: (productId: number, data: any) =>
+    api(`/products/${productId}/variants/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (productId: number, variantId: number, data: any) =>
+    api(`/products/${productId}/variants/${variantId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (productId: number, variantId: number) =>
+    api(`/products/${productId}/variants/${variantId}/`, {
+      method: 'DELETE',
+    }),
+};
+
+// Product Image APIs
+export const productImageAPI = {
+  getAll: (productId: number) => api(`/products/${productId}/images/`),
+
+  upload: async (productId: number, file: File, isPrimary: boolean = false) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('is_primary', String(isPrimary));
+
+    const token = localStorage.getItem('access_token');
+    const response = await fetch(`http://localhost:8000/api/v1/products/${productId}/images/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+    return response.json();
+  },
+
+  delete: (productId: number, imageId: number) =>
+    api(`/products/${productId}/images/${imageId}/`, {
+      method: 'DELETE',
+    }),
+
+  setPrimary: (productId: number, imageId: number) =>
+    api(`/products/${productId}/images/${imageId}/set-primary/`, {
+      method: 'POST',
+    }),
+};
+
+// Product Review APIs
+export const productReviewAPI = {
+  getAll: (productId: number) => api(`/products/${productId}/reviews/`),
+
+  create: (productId: number, data: any) =>
+    api(`/products/${productId}/reviews/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (productId: number, reviewId: number, data: any) =>
+    api(`/products/${productId}/reviews/${reviewId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (productId: number, reviewId: number) =>
+    api(`/products/${productId}/reviews/${reviewId}/`, {
+      method: 'DELETE',
+    }),
+
+  approve: (productId: number, reviewId: number) =>
+    api(`/products/${productId}/reviews/${reviewId}/approve/`, {
+      method: 'POST',
+    }),
+};
+
+// Inventory Log APIs
+export const inventoryLogAPI = {
+  getAll: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/inventory-logs/${query}`);
+  },
+
+  getByInventory: (inventoryId: number) => api(`/inventory/${inventoryId}/logs/`),
+};
+
+// Warehouse Location APIs
+export const warehouseLocationAPI = {
+  getAll: (warehouseId: number) => api(`/warehouses/${warehouseId}/locations/`),
+
+  create: (warehouseId: number, data: any) =>
+    api(`/warehouses/${warehouseId}/locations/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (warehouseId: number, locationId: number, data: any) =>
+    api(`/warehouses/${warehouseId}/locations/${locationId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (warehouseId: number, locationId: number) =>
+    api(`/warehouses/${warehouseId}/locations/${locationId}/`, {
+      method: 'DELETE',
+    }),
+};
+
+// Notification Template APIs
+export const notificationTemplateAPI = {
+  getAll: () => api('/notifications/templates/'),
+
+  getOne: (id: number) => api(`/notifications/templates/${id}/`),
+
+  create: (data: any) =>
+    api('/notifications/templates/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: any) =>
+    api(`/notifications/templates/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    api(`/notifications/templates/${id}/`, {
+      method: 'DELETE',
+    }),
+};
+
+// Send Notification APIs
+export const sendNotificationAPI = {
+  send: (data: any) =>
+    api('/notifications/send/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  broadcast: (data: any) =>
+    api('/notifications/broadcast/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+};
+
+// Vendor Staff APIs
+export const vendorStaffAPI = {
+  getAll: (vendorId: number) => api(`/vendors/${vendorId}/staff/`),
+
+  create: (vendorId: number, data: any) =>
+    api(`/vendors/${vendorId}/staff/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (vendorId: number, staffId: number, data: any) =>
+    api(`/vendors/${vendorId}/staff/${staffId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (vendorId: number, staffId: number) =>
+    api(`/vendors/${vendorId}/staff/${staffId}/`, {
+      method: 'DELETE',
+    }),
+};
+
+// Vendor actions
+export const vendorActionsAPI = {
+  approve: (id: number) =>
+    api(`/vendors/${id}/approve/`, {
+      method: 'POST',
+    }),
+
+  reject: (id: number, reason?: string) =>
+    api(`/vendors/${id}/reject/`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
+  suspend: (id: number, reason?: string) =>
+    api(`/vendors/${id}/suspend/`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
+  reactivate: (id: number) =>
+    api(`/vendors/${id}/reactivate/`, {
+      method: 'POST',
+    }),
+
+  getStats: (id: number) => api(`/vendors/${id}/stats/`),
+};
+
+// Sales Order Item APIs
+export const salesOrderItemAPI = {
+  getAll: (orderId: number) => api(`/sales-orders/${orderId}/items/`),
+
+  create: (orderId: number, data: any) =>
+    api(`/sales-orders/${orderId}/items/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (orderId: number, itemId: number, data: any) =>
+    api(`/sales-orders/${orderId}/items/${itemId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (orderId: number, itemId: number) =>
+    api(`/sales-orders/${orderId}/items/${itemId}/`, {
+      method: 'DELETE',
+    }),
+};
+
+// Purchase Order Item APIs
+export const purchaseOrderItemAPI = {
+  getAll: (orderId: number) => api(`/purchase-orders/${orderId}/items/`),
+
+  create: (orderId: number, data: any) =>
+    api(`/purchase-orders/${orderId}/items/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (orderId: number, itemId: number, data: any) =>
+    api(`/purchase-orders/${orderId}/items/${itemId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (orderId: number, itemId: number) =>
+    api(`/purchase-orders/${orderId}/items/${itemId}/`, {
+      method: 'DELETE',
+    }),
+};
+
+// Delivery Proof APIs
+export const deliveryProofAPI = {
+  get: (deliveryId: number) => api(`/deliveries/${deliveryId}/proof/`),
+
+  upload: async (deliveryId: number, data: { otp?: string; signature?: File; notes?: string }) => {
+    if (data.signature) {
+      const formData = new FormData();
+      if (data.otp) formData.append('otp', data.otp);
+      formData.append('signature', data.signature);
+      if (data.notes) formData.append('notes', data.notes);
+
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`http://localhost:8000/api/v1/deliveries/${deliveryId}/proof/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      return response.json();
+    }
+    return api(`/deliveries/${deliveryId}/proof/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+// Token Management APIs
+export const tokenAPI = {
+  getOutstanding: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/auth/tokens/outstanding/${query}`);
+  },
+
+  getBlacklisted: (params?: any) => {
+    const query = params ? `?${new URLSearchParams(params)}` : '';
+    return api(`/auth/tokens/blacklisted/${query}`);
+  },
+
+  blacklist: (tokenId: number) =>
+    api(`/auth/tokens/${tokenId}/blacklist/`, {
+      method: 'POST',
+    }),
+
+  blacklistAll: (userId: number) =>
+    api(`/auth/tokens/blacklist-all/`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId }),
     }),
 };
