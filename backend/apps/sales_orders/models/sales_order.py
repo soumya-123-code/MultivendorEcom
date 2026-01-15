@@ -9,21 +9,41 @@ from core.utils.choices import OrderSourceChoices, PaymentMethodChoices
 
 
 class SalesOrder(BaseModel):
-    """Sales Order model."""
-    
+    """
+    Master Sales Order model.
+    For multi-vendor orders, this is the parent order.
+    Individual vendor portions are in VendorOrder.
+    """
+
+    # Make vendor nullable for multi-vendor orders
+    # For single-vendor orders, this is set
+    # For multi-vendor orders, this is null and vendor_orders contains the splits
     vendor = models.ForeignKey(
         'vendors.Vendor',
         on_delete=models.CASCADE,
-        related_name='sales_orders'
+        related_name='sales_orders',
+        null=True,
+        blank=True,
+        help_text='For single-vendor orders only. Null for multi-vendor orders.'
     )
     customer = models.ForeignKey(
         'customers.Customer',
         on_delete=models.CASCADE,
         related_name='orders'
     )
-    
+
     order_number = models.CharField(max_length=50, unique=True)
     order_date = models.DateTimeField(auto_now_add=True)
+
+    # Multi-vendor support
+    is_multi_vendor = models.BooleanField(
+        default=False,
+        help_text='True if order contains items from multiple vendors'
+    )
+    vendor_count = models.PositiveIntegerField(
+        default=1,
+        help_text='Number of vendors in this order'
+    )
     
     # Source
     order_source = models.CharField(
@@ -60,6 +80,13 @@ class SalesOrder(BaseModel):
     discount_type = models.CharField(max_length=20, blank=True, null=True)
     discount_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     coupon_code = models.CharField(max_length=50, blank=True, null=True)
+    coupon = models.ForeignKey(
+        'sales_orders.Coupon',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='orders'
+    )
     
     # Amounts
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -116,7 +143,14 @@ class SalesOrder(BaseModel):
         verbose_name = 'sales order'
         verbose_name_plural = 'sales orders'
         ordering = ['-created_at']
-    
+        indexes = [
+            models.Index(fields=['customer', '-created_at']),
+            models.Index(fields=['vendor', '-created_at']),
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['payment_status']),
+            models.Index(fields=['order_number']),
+        ]
+
     def __str__(self):
         return f"{self.order_number} - {self.customer.user.email}"
     
