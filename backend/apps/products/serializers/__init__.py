@@ -16,6 +16,18 @@ from .review import (
     ReviewCreateSerializer,
     ReviewListSerializer,
 )
+from .brand import (
+    BrandSerializer,
+    BrandListSerializer,
+    BrandCreateSerializer,
+)
+from .attribute import (
+    CategoryAttributeSerializer,
+    CategoryAttributeListSerializer,
+    CategoryAttributeCreateSerializer,
+    ProductAttributeValueSerializer,
+    ProductAttributeValueCreateSerializer,
+)
 
 __all__ = [
     'CategorySerializer',
@@ -30,4 +42,12 @@ __all__ = [
     'ReviewSerializer',
     'ReviewCreateSerializer',
     'ReviewListSerializer',
+    'BrandSerializer',
+    'BrandListSerializer',
+    'BrandCreateSerializer',
+    'CategoryAttributeSerializer',
+    'CategoryAttributeListSerializer',
+    'CategoryAttributeCreateSerializer',
+    'ProductAttributeValueSerializer',
+    'ProductAttributeValueCreateSerializer',
 ]

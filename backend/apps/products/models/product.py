@@ -23,7 +23,27 @@ class Product(BaseModel):
         blank=True,
         related_name='products'
     )
-    
+    brand = models.ForeignKey(
+        'products.Brand',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='products'
+    )
+
+    # Product Type
+    PRODUCT_TYPE_CHOICES = [
+        ('physical', 'Physical Product'),
+        ('food', 'Food & Beverage'),
+        ('digital', 'Digital Product'),
+        ('service', 'Service'),
+    ]
+    product_type = models.CharField(
+        max_length=20,
+        choices=PRODUCT_TYPE_CHOICES,
+        default='physical'
+    )
+
     # Basic Info
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255)
@@ -89,7 +109,69 @@ class Product(BaseModel):
         db_index=True
     )
     is_featured = models.BooleanField(default=False)
-    
+
+    # Food-specific fields
+    is_vegetarian = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text='True for veg, False for non-veg, null for non-food'
+    )
+    is_vegan = models.BooleanField(null=True, blank=True)
+    is_organic = models.BooleanField(default=False)
+    allergens = models.JSONField(
+        blank=True,
+        null=True,
+        help_text='["nuts", "dairy", "gluten", "soy", "eggs", "shellfish"]'
+    )
+    nutritional_info = models.JSONField(
+        blank=True,
+        null=True,
+        help_text='{"calories": 200, "protein": 10, "carbs": 30, "fat": 5}'
+    )
+    ingredients = models.TextField(blank=True, null=True)
+    serving_size = models.CharField(max_length=50, blank=True, null=True)
+    servings_per_pack = models.PositiveIntegerField(null=True, blank=True)
+    preparation_time_mins = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text='Preparation time in minutes (for food)'
+    )
+    shelf_life_days = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text='Shelf life in days'
+    )
+    storage_instructions = models.TextField(blank=True, null=True)
+    is_temperature_sensitive = models.BooleanField(default=False)
+    min_storage_temp = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text='Minimum storage temperature in Celsius'
+    )
+    max_storage_temp = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text='Maximum storage temperature in Celsius'
+    )
+
+    # Food certifications
+    fssai_license = models.CharField(max_length=50, blank=True, null=True)
+    fssai_expiry = models.DateField(null=True, blank=True)
+
+    # Clothing-specific fields
+    material = models.CharField(max_length=100, blank=True, null=True)
+    care_instructions = models.TextField(blank=True, null=True)
+    country_of_origin = models.CharField(max_length=100, blank=True, null=True)
+    manufacturer = models.CharField(max_length=255, blank=True, null=True)
+    importer = models.CharField(max_length=255, blank=True, null=True)
+
+    # Size chart
+    size_chart = models.JSONField(
+        blank=True,
+        null=True,
+        help_text='Size chart data or image URL'
+    )
+
     # Analytics
     view_count = models.PositiveIntegerField(default=0)
     order_count = models.PositiveIntegerField(default=0)

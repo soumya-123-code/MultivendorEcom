@@ -22,7 +22,7 @@ import { Edit, Delete, Visibility } from '@mui/icons-material';
 import { customerAPI } from '../utils/api';
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState([]);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
@@ -37,10 +37,20 @@ export default function CustomersPage() {
     marketing_consent: false
   });
 
-  useEffect(() => { loadData(); }, []);
+  const [addressForm, setAddressForm] = useState({
+    label: 'home',
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    country: 'India',
+    is_default: false,
+  });
 
   const loadData = async () => {
     try {
+      setLoading(true);
       const data = await customerAPI.getAll();
       setCustomers(data.data || data.results || data);
     } catch (error: any) {
