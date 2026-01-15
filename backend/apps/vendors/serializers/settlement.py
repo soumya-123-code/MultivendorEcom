@@ -18,6 +18,38 @@ class VendorLedgerSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
 
+class VendorPayoutListSerializer(serializers.ModelSerializer):
+    """Minimal payout serializer for lists."""
+    vendor_name = serializers.CharField(source='vendor.store_name', read_only=True)
+
+    class Meta:
+        model = VendorPayout
+        fields = [
+            'id', 'vendor', 'vendor_name', 'payout_number',
+            'amount', 'payment_method', 'status',
+            'transaction_date', 'created_at',
+        ]
+
+
+class VendorPayoutSerializer(serializers.ModelSerializer):
+    """Full payout serializer."""
+    vendor_name = serializers.CharField(source='vendor.store_name', read_only=True)
+    settlement_number = serializers.CharField(source='settlement.settlement_number', read_only=True)
+
+    class Meta:
+        model = VendorPayout
+        fields = [
+            'id', 'vendor', 'vendor_name', 'settlement', 'settlement_number',
+            'payout_number', 'amount', 'currency', 'payment_method',
+            'bank_name', 'bank_account_number', 'bank_ifsc', 'bank_account_holder',
+            'upi_id', 'bank_reference', 'transaction_id', 'transaction_date',
+            'status', 'failure_reason',
+            'initiated_at', 'completed_at',
+            'notes', 'created_at',
+        ]
+        read_only_fields = ['id', 'payout_number', 'created_at']
+
+
 class VendorSettlementSerializer(serializers.ModelSerializer):
     """Full settlement serializer."""
     vendor_name = serializers.CharField(source='vendor.store_name', read_only=True)
@@ -76,38 +108,6 @@ class VendorSettlementDetailSerializer(serializers.ModelSerializer):
     def get_payouts(self, obj):
         payouts = obj.payouts.all()
         return VendorPayoutListSerializer(payouts, many=True).data
-
-
-class VendorPayoutListSerializer(serializers.ModelSerializer):
-    """Minimal payout serializer for lists."""
-    vendor_name = serializers.CharField(source='vendor.store_name', read_only=True)
-
-    class Meta:
-        model = VendorPayout
-        fields = [
-            'id', 'vendor', 'vendor_name', 'payout_number',
-            'amount', 'payment_method', 'status',
-            'transaction_date', 'created_at',
-        ]
-
-
-class VendorPayoutSerializer(serializers.ModelSerializer):
-    """Full payout serializer."""
-    vendor_name = serializers.CharField(source='vendor.store_name', read_only=True)
-    settlement_number = serializers.CharField(source='settlement.settlement_number', read_only=True)
-
-    class Meta:
-        model = VendorPayout
-        fields = [
-            'id', 'vendor', 'vendor_name', 'settlement', 'settlement_number',
-            'payout_number', 'amount', 'currency', 'payment_method',
-            'bank_name', 'bank_account_number', 'bank_ifsc', 'bank_account_holder',
-            'upi_id', 'bank_reference', 'transaction_id', 'transaction_date',
-            'status', 'failure_reason',
-            'initiated_at', 'completed_at',
-            'notes', 'created_at',
-        ]
-        read_only_fields = ['id', 'payout_number', 'created_at']
 
 
 class CommissionRecordSerializer(serializers.ModelSerializer):
